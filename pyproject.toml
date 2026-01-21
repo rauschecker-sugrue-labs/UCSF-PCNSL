@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "ucsf-pcnsl"
+version = "0.1.0"
+description = "Utilities and tutorials for working with UCSF PCNSL CNS lymphoma MRI data"
+authors = ["CNS Lymphoma Genetics Project"]
+readme = "README.md"
+packages = [{include = "pcnsl_data_loader.py"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+nibabel = "^5.0"
+nilearn = "^0.10"
+pandas = "^2.0"
+numpy = "^1.24"
+matplotlib = "^3.7"
+
+[tool.poetry.group.dev.dependencies]
+jupyter = "^1.0"
+ipykernel = "^6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
