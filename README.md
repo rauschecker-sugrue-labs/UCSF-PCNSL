@@ -173,6 +173,15 @@ print(summary_stats)
 
 This dataset is made available under the terms specified in the dataset's LICENSE file on AWS S3.
 
+## Attribution
+
+The tutorial notebook `get-to-know-a-dataset-pcnsl.ipynb` was developed with assistance from Claude (Anthropic). Claude contributed to:
+- Notebook structure and dual data source support (local filesystem and AWS S3)
+- Helper functions for loading NIfTI images and CSV files
+- Visualization code using nilearn and matplotlib
+- Statistical analysis and distribution plotting
+- Documentation and explanatory markdown cells
+
 ## Citation
 
 If you use this dataset in your research, please cite the associated publication (see dataset documentation on AWS for citation details).
