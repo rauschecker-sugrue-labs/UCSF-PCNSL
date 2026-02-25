@@ -1,0 +1,79 @@
+file type,directory,filename pattern,description,example values
+Raw Anatomy,sub-XXXX/ses-YYYY/anat,sub-XXXX_ses-YYYY_FLAIR.nii.gz,FLAIR (Fluid-Attenuated Inversion Recovery) MRI sequence in native acquisition space,NIfTI float32; shape varies per subject
+Raw Anatomy,sub-XXXX/ses-YYYY/anat,sub-XXXX_ses-YYYY_T1w.nii.gz,Pre-contrast T1-weighted MRI sequence in native acquisition space,NIfTI float32; shape varies per subject
+Raw Anatomy,sub-XXXX/ses-YYYY/anat,sub-XXXX_ses-YYYY_ce-gadolinium_T1w.nii.gz,Post-contrast (gadolinium) T1-weighted MRI sequence in native acquisition space,NIfTI float32; shape varies per subject
+Raw Diffusion,sub-XXXX/ses-YYYY/dwi,sub-XXXX_ses-YYYY_DWI_ADC.nii.gz,Apparent Diffusion Coefficient (ADC) map derived from diffusion-weighted imaging in native acquisition space,NIfTI float32; shape varies per subject
+Lesion Mask,derivatives/pyalfe/sub-XXXX/ses-YYYY/masks/lesions_seg_comp,sub-XXXX_ses-YYYY_FLAIR_abnormal_seg_comp.nii.gz,Connected-component labeled lesion segmentation mask in FLAIR native space. Each integer label (1-N) represents a distinct lesion.,Integer labels 0 (background) through N (up to 52 components observed); FLAIR native space
+Lesion Mask,derivatives/pyalfe/sub-XXXX/ses-YYYY/masks/lesions_seg_comp,sub-XXXX_ses-YYYY_T1Post_abnormal_seg_comp.nii.gz,Connected-component labeled lesion segmentation mask in post-contrast T1 native space. Each integer label (1-N) represents a distinct lesion.,Integer labels 0 (background) through N; T1Post native space
+Skullstripped,derivatives/pyalfe/sub-XXXX/ses-YYYY/skullstripped/lesions_FLAIR_space,sub-XXXX_ses-YYYY_FLAIR_to_FLAIR_skullstripped.nii.gz,Skull-stripped FLAIR image in FLAIR space,NIfTI float32; brain-extracted; 0 outside brain
+Skullstripped,derivatives/pyalfe/sub-XXXX/ses-YYYY/skullstripped/lesions_FLAIR_space,sub-XXXX_ses-YYYY_T1Post_to_FLAIR_skullstripped.nii.gz,Post-contrast T1 coregistered to FLAIR space and skull-stripped,NIfTI float32; coregistered and brain-extracted
+Skullstripped,derivatives/pyalfe/sub-XXXX/ses-YYYY/skullstripped/lesions_FLAIR_space,sub-XXXX_ses-YYYY_T1_to_FLAIR_skullstripped.nii.gz,Pre-contrast T1 coregistered to FLAIR space and skull-stripped,NIfTI float32; coregistered and brain-extracted
+Skullstripped,derivatives/pyalfe/sub-XXXX/ses-YYYY/skullstripped/lesions_FLAIR_space,sub-XXXX_ses-YYYY_ADC_to_FLAIR_skullstripped.nii.gz,ADC map coregistered to FLAIR space and skull-stripped,NIfTI float32; coregistered and brain-extracted
+Skullstripped,derivatives/pyalfe/sub-XXXX/ses-YYYY/skullstripped/lesions_T1Post_space,sub-XXXX_ses-YYYY_T1Post_to_T1Post_skullstripped.nii.gz,Skull-stripped post-contrast T1 image in T1Post space,NIfTI float32; brain-extracted; 0 outside brain
+Skullstripped,derivatives/pyalfe/sub-XXXX/ses-YYYY/skullstripped/lesions_T1Post_space,sub-XXXX_ses-YYYY_FLAIR_to_T1Post_skullstripped.nii.gz,FLAIR coregistered to T1Post space and skull-stripped,NIfTI float32; coregistered and brain-extracted
+Skullstripped,derivatives/pyalfe/sub-XXXX/ses-YYYY/skullstripped/lesions_T1Post_space,sub-XXXX_ses-YYYY_T1_to_T1Post_skullstripped.nii.gz,Pre-contrast T1 coregistered to T1Post space and skull-stripped,NIfTI float32; coregistered and brain-extracted
+Skullstripped,derivatives/pyalfe/sub-XXXX/ses-YYYY/skullstripped/lesions_T1Post_space,sub-XXXX_ses-YYYY_ADC_to_T1Post_skullstripped.nii.gz,ADC map coregistered to T1Post space and skull-stripped,NIfTI float32; coregistered and brain-extracted
+SummaryLesions CSV,derivatives/pyalfe/sub-XXXX/ses-YYYY/statistics/lesions_SummaryLesions,sub-XXXX_ses-YYYY_{FLAIR|T1Post}_SummaryLesions.csv,"Aggregate lesion statistics for all lesions in the subject. Two columns: Label (metric name) and Value. One row per metric, computed over all lesions combined.",Label and Value columns; 59 metrics per file
+SummaryLesions CSV - total_lesion_volume,statistics/lesions_SummaryLesions,,Total volume of all lesions combined (mm^3),73343.98; 8588.97
+SummaryLesions CSV - lesion_volume_in_background,statistics/lesions_SummaryLesions,,Lesion volume falling in background tissue class (mm^3),73.67; 0.0
+SummaryLesions CSV - lesion_volume_in_csf,statistics/lesions_SummaryLesions,,Lesion volume falling in cerebrospinal fluid tissue class (mm^3),2187.75; 314.72
+SummaryLesions CSV - lesion_volume_in_cortical_gray_matter,statistics/lesions_SummaryLesions,,Lesion volume falling in cortical gray matter tissue class (mm^3),24346.44; 6346.32
+SummaryLesions CSV - lesion_volume_in_white_matter,statistics/lesions_SummaryLesions,,Lesion volume falling in white matter tissue class (mm^3),36406.00; 1878.75
+SummaryLesions CSV - lesion_volume_in_deep_gray_matter,statistics/lesions_SummaryLesions,,Lesion volume falling in deep gray matter tissue class (mm^3),685.44; 49.19
+SummaryLesions CSV - lesion_volume_in_brain_stem,statistics/lesions_SummaryLesions,,Lesion volume falling in brain stem tissue class (mm^3),0.0
+SummaryLesions CSV - lesion_volume_in_cerebellum,statistics/lesions_SummaryLesions,,Lesion volume falling in cerebellum tissue class (mm^3),0.0
+SummaryLesions CSV - relative_T1_signal,statistics/lesions_SummaryLesions,,Mean lesion signal intensity relative to normal-appearing white matter on pre-contrast T1,0.73; 0.82
+SummaryLesions CSV - relative_T1Post_signal,statistics/lesions_SummaryLesions,,Mean lesion signal intensity relative to normal-appearing white matter on post-contrast T1,0.84; 1.43
+SummaryLesions CSV - relative_FLAIR_signal,statistics/lesions_SummaryLesions,,Mean lesion signal intensity relative to normal-appearing white matter on FLAIR,2.47; 1.36
+SummaryLesions CSV - relative_ADC_signal,statistics/lesions_SummaryLesions,,Mean lesion ADC value relative to normal-appearing white matter,1.60; 0.91
+SummaryLesions CSV - relative_min_ADC_signal,statistics/lesions_SummaryLesions,,Minimum lesion ADC value relative to normal-appearing white matter,-0.32; 0.52
+SummaryLesions CSV - min_ADC_signal,statistics/lesions_SummaryLesions,,Minimum ADC value within the lesion (raw units),-239.59; 389.12
+SummaryLesions CSV - mean_ADC_signal,statistics/lesions_SummaryLesions,,Mean ADC value within the lesion (raw units),1186.46; 681.25
+SummaryLesions CSV - median_ADC_signal,statistics/lesions_SummaryLesions,,Median ADC value within the lesion (raw units),1224.94; 654.66
+SummaryLesions CSV - five_percentile_ADC_signal,statistics/lesions_SummaryLesions,,5th percentile ADC value within the lesion (raw units),581.60; 427.82
+SummaryLesions CSV - ninety_five_percentile_ADC_signal,statistics/lesions_SummaryLesions,,95th percentile ADC value within the lesion (raw units),1743.49; 1003.78
+SummaryLesions CSV - enhancement,statistics/lesions_SummaryLesions,,Ratio of post-contrast T1 to pre-contrast T1 signal within the lesion,1.21; 1.74
+SummaryLesions CSV - average_dist_to_ventricles_(voxels),statistics/lesions_SummaryLesions,,Mean distance from lesion voxels to the nearest ventricle (in voxels),33.59; 10.24
+SummaryLesions CSV - minimum_dist_to_Ventricles_(voxels),statistics/lesions_SummaryLesions,,Minimum distance from any lesion voxel to the nearest ventricle (in voxels),0.0; 1.0
+SummaryLesions CSV - lesion_volume_in_{Region},statistics/lesions_SummaryLesions,,"Lesion volume (mm^3) in the specified brain region. Regions: Frontal, Parietal, Occipital, Temporal, AnteriorTemporal, MiddleTemporal, PosteriorTemporal, Parietal_Occipital, CorpusCallosum, CorpusCallosum_Rostrum, CorpusCallosum_Genu, CorpusCallosum_Body, CorpusCallosum_Isthmus, CorpusCallosum_Splenium",18855.90; 42913.43
+SummaryLesions CSV - percentage_volume_in_{Region},statistics/lesions_SummaryLesions,,"Percentage of total lesion volume in the specified brain region. Same regions as lesion_volume_in_{Region}.",25.71; 58.51
+SummaryLesions CSV - lesion_volume_in_{TissueClass},statistics/lesions_SummaryLesions,,"Lesion volume (mm^3) by SRI24 atlas tissue class. Classes: CSF, Cortical Gray Matter, White Matter, Deep Gray Matter, Brain Stem, Cerebellum",10210.25; 42337.70
+SummaryLesions CSV - percentage_volume_in_{TissueClass},statistics/lesions_SummaryLesions,,"Percentage of total lesion volume by SRI24 atlas tissue class. Same classes as lesion_volume_in_{TissueClass}.",13.92; 57.72
+SummaryLesions CSV - number_of_lesions,statistics/lesions_SummaryLesions,,Total number of distinct lesion connected components,1.0; 3.0; 12.0
+SummaryLesions CSV - largest_lesion_volume,statistics/lesions_SummaryLesions,,Volume of the largest individual lesion (mm^3),73343.98; 8100.50
+SummaryLesions CSV - average_lesion_volume,statistics/lesions_SummaryLesions,,Mean volume across all individual lesions (mm^3),73343.98; 2862.99
+IndividualLesions CSV,derivatives/pyalfe/sub-XXXX/ses-YYYY/statistics/lesions_IndividualLesions,sub-XXXX_ses-YYYY_{FLAIR|T1Post}_IndividualLesions.csv,"Per-lesion measurements with one row per connected component. First column is LesionNumber (0-indexed). Remaining columns are the same metrics as SummaryLesions (excluding number_of_lesions, largest_lesion_volume, average_lesion_volume), computed for each individual lesion.",LesionNumber 0..N; same volume/signal/distance metrics as SummaryLesions
+Radiomics CSV,derivatives/pyalfe/sub-XXXX/ses-YYYY/statistics/lesions_radiomics,sub-XXXX_ses-YYYY_{FLAIR|T1Post}_radiomics.csv,"PyRadiomics features extracted from the lesion mask. Two columns: Label (feature name) and Value. Includes diagnostics metadata rows and radiomic features.",Label and Value columns; 54 rows per file
+Radiomics CSV - diagnostics_*,statistics/lesions_radiomics,,PyRadiomics diagnostics metadata including software versions and configuration settings,diagnostics_Versions_PyRadiomics: v3.0.1
+Radiomics CSV - original_shape_Elongation,statistics/lesions_radiomics,,Elongation of the lesion (ratio of second-longest to longest principal axis),0.92; 0.78
+Radiomics CSV - original_shape_Flatness,statistics/lesions_radiomics,,Flatness of the lesion (ratio of shortest to longest principal axis),0.83; 0.55
+Radiomics CSV - original_shape_LeastAxisLength,statistics/lesions_radiomics,,Length of the shortest principal axis of the lesion (mm),45.92; 12.34
+Radiomics CSV - original_shape_MajorAxisLength,statistics/lesions_radiomics,,Length of the longest principal axis of the lesion (mm),55.50; 28.16
+Radiomics CSV - original_shape_Maximum2DDiameterColumn,statistics/lesions_radiomics,,Largest 2D diameter of the lesion in the column direction (mm),77.10; 35.22
+Radiomics CSV - original_shape_Maximum2DDiameterRow,statistics/lesions_radiomics,,Largest 2D diameter of the lesion in the row direction (mm),64.24; 30.81
+Radiomics CSV - original_shape_Maximum2DDiameterSlice,statistics/lesions_radiomics,,Largest 2D diameter of the lesion in the slice direction (mm),63.64; 28.99
+Radiomics CSV - original_shape_Maximum3DDiameter,statistics/lesions_radiomics,,Largest 3D diameter of the lesion (mm),77.37; 39.45
+Radiomics CSV - original_shape_MeshVolume,statistics/lesions_radiomics,,Volume of the lesion computed from the surface mesh (mm^3),73301.74; 5234.12
+Radiomics CSV - original_shape_MinorAxisLength,statistics/lesions_radiomics,,Length of the second-longest principal axis of the lesion (mm),50.90; 21.95
+Radiomics CSV - original_shape_Sphericity,statistics/lesions_radiomics,,Sphericity of the lesion (1.0 = perfect sphere),0.49; 0.72
+Radiomics CSV - original_shape_SurfaceArea,statistics/lesions_radiomics,,Surface area of the lesion mesh (mm^2),17229.19; 2845.33
+Radiomics CSV - original_shape_SurfaceVolumeRatio,statistics/lesions_radiomics,,Ratio of surface area to volume of the lesion (mm^-1),0.24; 0.54
+Radiomics CSV - original_shape_VoxelVolume,statistics/lesions_radiomics,,Volume of the lesion computed by voxel counting (mm^3),73343.98; 5250.00
+Radiomics CSV - original_firstorder_10Percentile,statistics/lesions_radiomics,,10th percentile of voxel intensity values within the lesion,366.0; 215.0
+Radiomics CSV - original_firstorder_90Percentile,statistics/lesions_radiomics,,90th percentile of voxel intensity values within the lesion,838.0; 622.0
+Radiomics CSV - original_firstorder_Energy,statistics/lesions_radiomics,,Sum of squared voxel intensity values within the lesion,184396536360.0
+Radiomics CSV - original_firstorder_Entropy,statistics/lesions_radiomics,,Shannon entropy of the voxel intensity histogram within the lesion,4.70; 3.89
+Radiomics CSV - original_firstorder_InterquartileRange,statistics/lesions_radiomics,,Interquartile range (75th - 25th percentile) of voxel intensities,273.0; 198.0
+Radiomics CSV - original_firstorder_Kurtosis,statistics/lesions_radiomics,,Kurtosis of the voxel intensity distribution within the lesion,2.77; 3.12
+Radiomics CSV - original_firstorder_Maximum,statistics/lesions_radiomics,,Maximum voxel intensity value within the lesion,976.0; 850.0
+Radiomics CSV - original_firstorder_MeanAbsoluteDeviation,statistics/lesions_radiomics,,Mean absolute deviation of voxel intensities within the lesion,153.72; 102.45
+Radiomics CSV - original_firstorder_Mean,statistics/lesions_radiomics,,Mean voxel intensity value within the lesion,636.95; 432.18
+Radiomics CSV - original_firstorder_Median,statistics/lesions_radiomics,,Median voxel intensity value within the lesion,690.0; 445.0
+Radiomics CSV - original_firstorder_Minimum,statistics/lesions_radiomics,,Minimum voxel intensity value within the lesion,89.0; 12.0
+Radiomics CSV - original_firstorder_Range,statistics/lesions_radiomics,,Range (max - min) of voxel intensity values within the lesion,887.0; 838.0
+Radiomics CSV - original_firstorder_RobustMeanAbsoluteDeviation,statistics/lesions_radiomics,,Mean absolute deviation computed on the 10th-90th percentile range,111.94; 78.55
+Radiomics CSV - original_firstorder_RootMeanSquared,statistics/lesions_radiomics,,Root mean squared voxel intensity value within the lesion,663.29; 455.12
+Radiomics CSV - original_firstorder_Skewness,statistics/lesions_radiomics,,Skewness of the voxel intensity distribution within the lesion,-0.78; 0.32
+Radiomics CSV - original_firstorder_TotalEnergy,statistics/lesions_radiomics,,Total energy (sum of squared intensities scaled by voxel volume),32267890309.24
+Radiomics CSV - original_firstorder_Uniformity,statistics/lesions_radiomics,,Uniformity (sum of squared histogram bin probabilities) of voxel intensities,0.045; 0.062
+Radiomics CSV - original_firstorder_Variance,statistics/lesions_radiomics,,Variance of voxel intensity values within the lesion,34249.65; 15832.44

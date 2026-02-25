@@ -1,0 +1,108 @@
+spreadsheet,column name,description,example values
+biopsy_and_diagnosis_dates.csv,accessions,Anonymized session/accession identifier linking to BIDS subject ID,0001
+biopsy_and_diagnosis_dates.csv,patientdurablekey,Anonymized patient identifier,0018; 0019; 0020
+biopsy_and_diagnosis_dates.csv,BiopsyDate,Date of tissue biopsy (M/D/YY),6/3/13; 10/14/10; 9/13/14
+biopsy_and_diagnosis_dates.csv,DiagnosisDate,Date of PCNSL diagnosis (M/D/YY),2/17/16; 1/31/13; 11/11/09
+biopsy_and_diagnosis_dates.csv,ImageDate,Date of MRI imaging session (M/D/YY),2/2/16; 11/8/12; 10/25/09
+biopsy_and_diagnosis_dates.csv,BiopsyDateMinusImageDate,Days between biopsy and imaging (positive = biopsy after imaging),-178; -34; 3
+biopsy_and_diagnosis_dates.csv,DiagnosisDateMinusImageDate,Days between diagnosis and imaging (positive = diagnosis after imaging),15; 84; 17
+demographics.csv,patientdurablekey,Anonymized patient identifier,0091; 0048; 0106
+demographics.csv,Sex,Patient sex,Female; Male
+demographics.csv,SexualOrientation,Patient sexual orientation,Straight; *Unspecified; Gay
+demographics.csv,BirthDate,Patient date of birth (M/D/YY),1/2/47; 9/8/50; 9/8/46
+demographics.csv,Deathdate,Patient date of death if applicable (M/D/YY),8/30/12; 5/31/19; 10/6/21
+demographics.csv,PreferredLanguage,Patient preferred language,English; Vietnamese; Farsi
+demographics.csv,FirstRace,Patient primary race,White; Asian; Other
+demographics.csv,SecondRace,Patient secondary race if applicable,Asian; Other; White
+demographics.csv,Ethnicity,Patient ethnicity,Hispanic or Latino; Not Hispanic or Latino; Unknown
+diagnosis_history.csv,patientdurablekey,Anonymized patient identifier,0141; 0058; 0015
+diagnosis_history.csv,DiagnosisEventKey,Unique hashed identifier for the diagnosis event,DC18752AC1E2A1; DED885984B8E0A
+diagnosis_history.csv,DiagnosisKey,Unique numeric identifier for the diagnosis code,414082; 1430073; 1377341
+diagnosis_history.csv,DiagnosisName,Name or description of the diagnosis,"Central hypothyroidism; Multiple myeloma, remission status unspecified (CMS code)"
+diagnosis_history.csv,StartDateKey,Start date as integer in YYYYMMDD format,20201123; 20210108; 20181118
+diagnosis_history.csv,StartDateKeyValue,Start date in M/DD/YY format,11/23/20; 1/8/21; 11/18/18
+diagnosis_history.csv,EndDateKey,End date as integer in YYYYMMDD format,20201123; 20210108; 20181118
+diagnosis_history.csv,EndDateKeyValue,End date in M/DD/YY format,11/23/20; 1/8/21; 11/18/18
+medication_list_administered.csv,patientdurablekey,Anonymized patient identifier,0114; 0119; 0133
+medication_list_administered.csv,ScheduledAdministrationDateKeyValue,Scheduled date of medication administration (YYYY-MM-DD),2023-03-26; 2018-08-18
+medication_list_administered.csv,AdministrationDateKeyValue,Actual date of medication administration (YYYY-MM-DD),2023-03-26; 2018-08-18
+medication_list_administered.csv,AdministeringEmployeeKey,Anonymized identifier of the administering healthcare worker,81144; 49807; 37517
+medication_list_administered.csv,MedicationKey,Unique numeric identifier for the medication,4896; 68270; 70577
+medication_list_administered.csv,MedicationName,Brand or trade name of the medication with strength and form,DEXTROMETHORPHAN-GUAIFENESIN 10 MG-100 MG/5 ML ORAL SYRUP
+medication_list_administered.csv,MedicationGenericName,Generic name of the medication with strength and form,dextromethorphan-guaifenesin 10 mg-100 mg/5 mL oral syrup
+medication_list_administered.csv,MedicationTherapeuticClass,Therapeutic drug class,COUGH/COLD PREPARATIONS; ANALGESICS
+medication_list_administered.csv,MedicationPharmaceuticalClass,Pharmaceutical drug class,NON-OPIOID ANTITUSSIVE AND EXPECTORANT COMBINATION; OPIOID ANALGESIC
+medication_list_administered.csv,MedicationPharmaceuticalSubclass,Pharmaceutical drug subclass,Non-Opioid Antitussive-Expectorant Combinations; General Anesthetic Adjuncts - Opioid
+medication_list_administered.csv,MedicationStrength,Medication dosage strength,10-100 mg/5 mL; 1 mg; 2 mg
+medication_list_administered.csv,MedicationForm,Physical form of the medication,Syrup; Recon Soln; Suspension
+medication_list_administered.csv,MedicationRoute,Route of administration,Oral; Intravenous; Injection
+medication_list_administered.csv,ScheduledAdministrationInstant,Scheduled date and time of administration,2023-03-26 23:25:00.000; 2018-08-18 13:12:00.000
+medication_list_administered.csv,AdministrationInstant,Actual date and time of administration,2023-03-26 23:25:00.000; 2018-08-18 13:12:00.000
+medication_list_ordered.csv,patientdurablekey,Anonymized patient identifier,0040; 0120; 0139
+medication_list_ordered.csv,MedicationName,Brand or trade name of the medication with strength and form,MIDAZOLAM 1 MG/ML INJECTION SOLUTION; LORAZEPAM 2 MG/ML INJECTION SOLUTION
+medication_list_ordered.csv,MedicationGenericName,Generic name of the medication with strength and form,midazolam 1 mg/mL injection solution; LORazepam 2 mg/mL injection solution
+medication_list_ordered.csv,MedicationTherapeuticClass,Therapeutic drug class,ANESTHETICS; SEDATIVE/HYPNOTICS; *Unspecified
+medication_list_ordered.csv,MedicationPharmaceuticalClass,Pharmaceutical drug class,"GENERAL ANESTHETICS,INJECTABLE-BENZODIAZEPINE TYPE; SEDATIVE-HYPNOTICS - BENZODIAZEPINES"
+medication_list_ordered.csv,MedicationPharmaceuticalSubclass,Pharmaceutical drug subclass,"General Anesthetic - Parenteral, Benzodiazepines; Sedative-Hypnotic - Benzodiazepines"
+medication_list_ordered.csv,MedicationStrength,Medication dosage strength,1 mg/mL; 2 mg/mL; 400 mg/5 mL
+medication_list_ordered.csv,MedicationForm,Physical form of the medication,Solution; Suspension; *Unspecified
+medication_list_ordered.csv,MedicationRoute,Route of administration,Injection; Oral; *Unspecified
+medication_list_ordered.csv,OrderedDateKeyValue,Date the medication was ordered (YYYY-MM-DD),2019-05-16; 2022-08-09; 2022-06-15
+medication_list_ordered.csv,ReleaseDateKeyValue,Date the medication order was released (YYYY-MM-DD),2019-05-16; 2022-08-09; 2022-06-15
+medication_list_ordered.csv,StartDateKeyValue,Date the medication was started (YYYY-MM-DD),2022-01-11; 2022-01-01; 2016-04-13
+medication_list_ordered.csv,StartTimeOfDayKey,Time of day as integer key (-1 if not specified),-1; 1730; 0
+medication_list_ordered.csv,StartTimeOfDayKeyValue,Time of day the medication was started (HH:MM),17:30; 00:00; 08:45
+medication_list_ordered.csv,FinalVerificationDateKeyValue,Date of final pharmacist verification (YYYY-MM-DD),2015-05-22; 2016-08-12; 2015-11-08
+ucsf500_mutations.csv,accessions,Anonymized session/accession identifier linking to BIDS subject ID,0001
+ucsf500_mutations.csv,patientdurablekey,Anonymized patient identifier,0135; 0122; 0107
+ucsf500_mutations.csv,testtype,Type of UCSF500 genomic panel test performed,CCGL500TO_V3
+ucsf500_mutations.csv,orderdate,Date the genomic test was ordered,2021-08-12; 2021-12-04; 2022-02-26
+ucsf500_mutations.csv,tumorsampletype,Type of tumor sample submitted for testing,Solid Tissue
+ucsf500_mutations.csv,tumoranatomic,Anatomic location of the tumor sample,Brain; Eye; Right basal ganglia
+ucsf500_mutations.csv,tumorcollecteddate,Date the tumor specimen was collected,2013-06-03; 2010-10-14; 2014-09-13
+ucsf500_mutations.csv,tumorspecimenreceiveddate,Date the tumor specimen was received by the lab,2021-08-27; 2021-12-16; 2022-03-14
+ucsf500_mutations.csv,oncotreecode,OncoTree cancer type classification code,DLBCLNOS; BLL; PCNSL
+ucsf500_mutations.csv,oncotreedx,"OncoTree cancer type diagnosis name","Diffuse Large B-Cell Lymphoma, NOS; Primary DLBCL of the central nervous system"
+ucsf500_mutations.csv,tmbstatus,Tumor mutational burden status,TMB-H; TMB-L
+ucsf500_mutations.csv,tmbscore,Tumor mutational burden score (mutations per megabase),34.4; 28.2; 12.4
+ucsf500_mutations.csv,microsatellitestatus,Microsatellite instability status,MS-Stable; MS-High
+ucsf500_mutations.csv,microsatellitetestedsites,Number of microsatellite sites tested,82; 83; 86
+ucsf500_mutations.csv,microsatelliteunstablesites,Number of unstable microsatellite sites detected,2; 1; 0
+ucsf500_mutations.csv,msireported,Whether microsatellite instability results were reported,True
+ucsf500_mutations.csv,disease,Full disease name with OncoTree code in parentheses,"Diffuse Large B-Cell Lymphoma, NOS (DLBCLNOS); Primary DLBCL of the central nervous system (PCNSL)"
+ucsf500_mutations.csv,pathologistestimatedtumorfraction,Pathologist-estimated tumor cell fraction (%),15; 70; 25
+ucsf500_mutations.csv,normalfixation,Normal tissue fixation method (if applicable),
+ucsf500_mutations.csv,pipelineid,Numeric analysis pipeline version identifier,21; 23; 18
+ucsf500_mutations.csv,ucsfpipeline,UCSF500 analysis pipeline version string,V3 0.2.48; V3 0.2.50; V3 0.2.49
+ucsf500_mutations.csv,gene,Gene symbol where the variant was detected,MYC; AMER1; MLH1
+ucsf500_mutations.csv,alteration,Description of the genetic alteration (gene + protein change),MYC p.Q194_D195delinsHH; AMER1 p.C125Y; MYC p.L159F
+ucsf500_mutations.csv,geneticorigin,Origin classification of the variant,Detected; Somatic; Indeterminate
+ucsf500_mutations.csv,variantclassification,Clinical pathogenicity classification of the variant,Not Yet Classified; Uncertain Significance; Pathogenic
+ucsf500_mutations.csv,varianttype,Type of genetic variant,SNV; CNV; SV
+ucsf500_mutations.csv,variantcategory,Detailed category of the variant,Substitution - Missense; Complex - compound substitution; Promoter
+ucsf500_mutations.csv,hgvsp,HGVS protein-level notation for the variant,Q194_D195delinsHH; C125Y; L159F
+ucsf500_mutations.csv,hgvsc,HGVS coding DNA-level notation for the variant,c.582_583delGGinsCC; c.374G>A; c.475C>T
+ucsf500_mutations.csv,referenceallele,Reference allele at the variant position,GG; C; T
+ucsf500_mutations.csv,alternateallele,Alternate (variant) allele,CC; T; C
+ucsf500_mutations.csv,variantreads,Number of sequencing reads supporting the variant allele,53; 58; 171
+ucsf500_mutations.csv,totalreads,Total number of sequencing reads at the variant position,330; 265; 421
+ucsf500_mutations.csv,variantaf,Variant allele frequency (variant reads / total reads),0.161; 0.219; 0.406
+ucsf500_mutations.csv,referencesequence,RefSeq transcript accession used for annotation,NM_002467.4; NM_152424.3; NM_000249.3
+ucsf500_mutations.csv,dbsnp,dbSNP rs identifier if available,rs746320756; rs780816243
+ucsf500_mutations.csv,dbsnpsignificance,Clinical significance reported in dbSNP,unknown; pathogenic; probable-non-pathogenic
+ucsf500_mutations.csv,chromosome,Chromosome where the variant is located,8; X; 3
+ucsf500_mutations.csv,start,Genomic start position of the variant (GRCh37/hg19),128751045; 63412793; 128750938
+ucsf500_mutations.csv,exactotalalleles,Total number of alleles at this position in the ExAC database,121410; 121412; 121210
+ucsf500_mutations.csv,exacvariantalleles,Number of variant alleles at this position in the ExAC database,1; 17; 3
+ucsf500_mutations.csv,exacaf,Allele frequency of the variant in the ExAC database,8.2366e-06; 0.0001400191; 2.47504e-05
+ucsf500_mutations.csv,evsaf,Allele frequency of the variant in the Exome Variant Server,0.0077; 0.008; 0.1033
+ucsf500_mutations.csv,ucsf500normt,Variant allele frequency in matched normal tissue,0.4; 0.1; 0.2
+ucsf500_mutations.csv,ucsf500normn,Variant allele count in matched normal tissue,0.4; 0.1; 0.2
+ucsf500_mutations.csv,checkboxes,Additional annotation flags (e.g. hypermutation),hypermutation
+ucsf500_mutations.csv,cosmicid,COSMIC database identifier(s) for the variant,COSM1123912;COSM1123911; COSM7335214
+ucsf500_mutations.csv,cosmiccount,Number of occurrences in the COSMIC database,1;1; 1; 2;2
+ucsf500_mutations.csv,callsomatic,Somatic variant call status,GERMLINE; UNDETERMINED
+ucsf500_mutations.csv,k1000genomesaf,Allele frequency of the variant in the 1000 Genomes Project,0.00519169; 0.000199681; 0.000798722
+ucsf500_mutations.csv,np,RefSeq protein accession used for annotation,NP_002458.2; NP_689637.3; NP_000240.1
+ucsf500_mutations.csv,qual,Variant call quality score from the sequencing pipeline,1170.49; 1309.9; 5057.06
+ucsf500_mutations.csv,reportedalteration,Whether the alteration was reported as clinically significant,True; False
