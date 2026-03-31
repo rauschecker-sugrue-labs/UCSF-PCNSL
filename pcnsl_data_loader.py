@@ -62,6 +62,7 @@ DICOM_TAG_MAP: dict[str, str] = {
     "(0008,103E)": "SeriesDescription",
     "(0018,0023)": "MRAcquisitionType",
     "(0018,0050)": "SliceThickness",
+    "(0018,0088)": "SpacingBetweenSlices",
     "(0018,0080)": "RepetitionTime",
     "(0018,0081)": "EchoTime",
     "(0018,0082)": "InversionTime",
@@ -134,6 +135,14 @@ def parse_dicom_tag_json(path: str | Path) -> dict:
     num_files = d.get("_consolidation_info", {}).get("num_files_in_series")
     if num_files is not None:
         result["NumSlices"] = num_files
+
+    sbs = result.get("SpacingBetweenSlices")
+    st  = result.get("SliceThickness")
+    if sbs is not None and st is not None:
+        try:
+            result["SliceGap_mm"] = round(float(sbs) - float(st), 3)
+        except (TypeError, ValueError):
+            pass
 
     return result
 
@@ -1389,6 +1398,71 @@ def load_aws_dicom_headers(
     """
     loader = AWSDataLoader(bids_path, csv_path)
     return loader.load_dicom_headers(subjects=subjects, session=session)
+
+
+def load_aws_dicom_geometry(
+    subjects: list[str] | None = None,
+    session: str = "ses-0001",
+    bids_path: str | Path = DEFAULT_AWS_BIDS_PATH,
+) -> pd.DataFrame:
+    """
+    Load voxel geometry for all subjects from raw DICOM tag JSON files.
+
+    Uses dicom_headers/ (not dcm2niix_sidecars/) because pixel geometry
+    (Rows, Columns, PixelSpacing) is absent from dcm2niix output.
+
+    Units:
+      - PixelSpacing, SliceThickness, SpacingBetweenSlices, FOV: millimetres
+      - SliceGap_mm = SpacingBetweenSlices - SliceThickness
+        (negative = slice overlap for 3D acquisitions; positive = gap for 2D)
+      - VoxelVolume_mm3 = PixelSpacing[0] × PixelSpacing[1] × SliceThickness
+
+    Args:
+        subjects: Subject IDs. If None, loads all available.
+        session: Session ID (default: 'ses-0001')
+        bids_path: Path to the BIDS directory
+
+    Returns:
+        DataFrame with one row per subject/sequence containing geometry fields:
+        subject, session, sequence, MRAcquisitionType,
+        PixelSpacing, SliceThickness, SpacingBetweenSlices, SliceGap_mm,
+        Rows, Columns, Matrix, FOV_row_mm, FOV_col_mm, NumSlices,
+        VoxelVolume_mm3
+
+    Example:
+        >>> geom = load_aws_dicom_geometry()
+        >>> flair = geom[geom["sequence"] == "FLAIR"]
+        >>> print(flair[["subject", "Matrix", "SliceThickness", "SliceGap_mm"]].head())
+    """
+    deriv_base = Path(bids_path) / "derivatives" / "pyalfe"
+    if subjects is None:
+        subjects = sorted(d.name for d in deriv_base.glob("sub-*") if d.is_dir())
+
+    records = []
+    for subject in subjects:
+        dicom_dir = deriv_base / subject / session / "dicom_headers"
+        if not dicom_dir.exists():
+            continue
+        for json_path in sorted(dicom_dir.glob("*.json")):
+            try:
+                parsed = parse_dicom_tag_json(json_path)
+                parts = json_path.stem.split("_")
+                parsed["subject"]  = subject
+                parsed["session"]  = session
+                parsed["sequence"] = "_".join(parts[2:])
+                spacing = parsed.get("PixelSpacing")
+                st = parsed.get("SliceThickness")
+                if spacing is not None and st is not None:
+                    ps = spacing if isinstance(spacing, list) else [spacing, spacing]
+                    try:
+                        parsed["VoxelVolume_mm3"] = round(ps[0] * ps[1] * float(st), 4)
+                    except (TypeError, ValueError):
+                        pass
+                records.append(parsed)
+            except Exception:
+                continue
+
+    return pd.DataFrame(records)
 
 
 def load_aws_biopsy_and_diagnosis_dates(
