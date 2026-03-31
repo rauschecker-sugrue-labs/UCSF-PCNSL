@@ -126,10 +126,10 @@ def parse_dicom_tag_json(path: str | Path) -> dict:
     if rows is not None and cols is not None:
         result["Matrix"] = f"{rows}x{cols}"
 
-    if rows is not None and cols is not None and spacing is not None:
-        ps = spacing if isinstance(spacing, list) else [spacing, spacing]
-        result["FOV_row_mm"] = round(rows * ps[0], 1)
-        result["FOV_col_mm"] = round(cols * ps[1], 1)
+        if spacing is not None:
+            ps = spacing if isinstance(spacing, list) else [spacing, spacing]
+            result["FOV_row_mm"] = round(rows * ps[0], 1)
+            result["FOV_col_mm"] = round(cols * ps[1], 1)
 
     num_files = d.get("_consolidation_info", {}).get("num_files_in_series")
     if num_files is not None:
