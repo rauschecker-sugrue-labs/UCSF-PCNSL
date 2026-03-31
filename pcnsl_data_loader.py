@@ -18,6 +18,7 @@ Author: CNS Lymphoma Genetics Project
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Literal
@@ -52,6 +53,89 @@ ClinicalDataType = Literal[
     "medication_list_ordered",
     "ucsf500_mutations",
 ]
+
+# DICOM tag map: (XXXX,XXXX) -> friendly column name (DICOM keyword)
+DICOM_TAG_MAP: dict[str, str] = {
+    "(0008,0070)": "Manufacturer",
+    "(0008,1090)": "ManufacturerModelName",
+    "(0008,1030)": "StudyDescription",
+    "(0008,103E)": "SeriesDescription",
+    "(0018,0023)": "MRAcquisitionType",
+    "(0018,0050)": "SliceThickness",
+    "(0018,0080)": "RepetitionTime",
+    "(0018,0081)": "EchoTime",
+    "(0018,0082)": "InversionTime",
+    "(0018,0087)": "MagneticFieldStrength",
+    "(0018,1314)": "FlipAngle",
+    "(0028,0010)": "Rows",
+    "(0028,0011)": "Columns",
+    "(0028,0030)": "PixelSpacing",
+}
+
+
+def parse_dicom_tag_json(path: str | Path) -> dict:
+    """
+    Parse a raw DICOM tag JSON file into a flat dictionary.
+
+    Extracts tag values using DICOM_TAG_MAP and derives Matrix, FOV_row_mm,
+    FOV_col_mm, and NumSlices from pixel geometry tags.
+
+    Units after extraction:
+      - RepetitionTime / EchoTime / InversionTime: milliseconds
+        (raw DICOM stores in ms; dcm2niix BIDS sidecars divide by 1000 → seconds)
+      - MagneticFieldStrength: Tesla
+        (DICOM standard requires Tesla, but some older GE scanners incorrectly
+        store Gauss; values > 100 are corrected by dividing by 10,000)
+      - SliceThickness / PixelSpacing / FOV_*_mm: millimetres
+
+    Args:
+        path: Path to the DICOM tag JSON file.
+
+    Returns:
+        Flat dict with friendly key names, plus derived fields:
+        - Matrix: "RowsxColumns" string (e.g. "512x512")
+        - FOV_row_mm, FOV_col_mm: field of view in mm
+        - NumSlices: from _consolidation_info.num_files_in_series
+    """
+    with open(path) as f:
+        d = json.load(f)
+
+    tags = d.get("tags", {})
+    result: dict = {}
+
+    for tag, name in DICOM_TAG_MAP.items():
+        entry = tags.get(tag)
+        if entry is not None:
+            result[name] = entry["value"]
+
+    # Some older GE scanners store MagneticFieldStrength in Gauss rather than
+    # Tesla (DICOM standard).  1 T = 10,000 G, so values > 100 are in Gauss.
+    fs = result.get("MagneticFieldStrength")
+    if fs is not None:
+        try:
+            fs_float = float(fs)
+            if fs_float > 100:
+                result["MagneticFieldStrength"] = round(fs_float / 10_000, 2)
+        except (TypeError, ValueError):
+            pass
+
+    rows = result.get("Rows")
+    cols = result.get("Columns")
+    spacing = result.get("PixelSpacing")
+
+    if rows is not None and cols is not None:
+        result["Matrix"] = f"{rows}x{cols}"
+
+    if rows is not None and cols is not None and spacing is not None:
+        ps = spacing if isinstance(spacing, list) else [spacing, spacing]
+        result["FOV_row_mm"] = round(rows * ps[0], 1)
+        result["FOV_col_mm"] = round(cols * ps[1], 1)
+
+    num_files = d.get("_consolidation_info", {}).get("num_files_in_series")
+    if num_files is not None:
+        result["NumSlices"] = num_files
+
+    return result
 
 
 class PCNSLDataLoader:
@@ -1028,6 +1112,54 @@ class AWSDataLoader:
             subject, session, processing, modality
         )
 
+    # =========================================================================
+    # DICOM Header Loading
+    # =========================================================================
+
+    def load_dicom_headers(
+        self,
+        subjects: list[str] | None = None,
+        session: str = "ses-0001",
+    ) -> pd.DataFrame:
+        """
+        Load DICOM header metadata for all subjects.
+
+        Reads JSON files from derivatives/pyalfe/sub-*/ses-*/dicom_headers/
+        and returns a DataFrame with one row per series per subject.
+
+        Args:
+            subjects: Subject IDs. If None, loads all available.
+            session: Session ID (default: 'ses-0001')
+
+        Returns:
+            DataFrame with subject, session, sequence, and extracted DICOM
+            fields including derived Matrix, FOV_row_mm, FOV_col_mm, and
+            NumSlices. Units: TR/TE/TI in ms, MagneticFieldStrength in T,
+            distances in mm.
+        """
+        if subjects is None:
+            subjects = self.list_imaging_subjects()
+
+        derivatives_base = self.bids_path / "derivatives" / "pyalfe"
+        records = []
+
+        for subject in subjects:
+            dicom_dir = derivatives_base / subject / session / "dicom_headers"
+            if not dicom_dir.exists():
+                continue
+            for json_path in sorted(dicom_dir.glob("*.json")):
+                try:
+                    row = parse_dicom_tag_json(json_path)
+                    row["subject"] = subject
+                    row["session"] = session
+                    parts = json_path.stem.split("_")
+                    row["sequence"] = "_".join(parts[2:])
+                    records.append(row)
+                except Exception:
+                    continue
+
+        return pd.DataFrame(records)
+
 
 # =============================================================================
 # Convenience Functions
@@ -1187,6 +1319,34 @@ def load_aws_mutations(
     """
     loader = AWSDataLoader(bids_path, csv_path)
     return loader.load_mutations_for_imaging_subjects()
+
+
+def load_aws_dicom_headers(
+    subjects: list[str] | None = None,
+    session: str = "ses-0001",
+    bids_path: str | Path = DEFAULT_AWS_BIDS_PATH,
+    csv_path: str | Path = DEFAULT_AWS_CSV_PATH,
+) -> pd.DataFrame:
+    """
+    Load DICOM header metadata from the AWS anonymized dataset.
+
+    Args:
+        subjects: Subject IDs. If None, loads all available.
+        session: Session ID (default: 'ses-0001')
+        bids_path: Path to the BIDS directory
+        csv_path: Path to the CSV files directory
+
+    Returns:
+        DataFrame with subject, session, sequence, and DICOM metadata.
+        Units: TR/TE/TI in ms, MagneticFieldStrength in T, distances in mm.
+
+    Example:
+        >>> df = load_aws_dicom_headers()
+        >>> flair = df[df["sequence"] == "FLAIR"]
+        >>> print(flair[["subject", "Matrix", "FOV_row_mm", "FOV_col_mm"]].head())
+    """
+    loader = AWSDataLoader(bids_path, csv_path)
+    return loader.load_dicom_headers(subjects=subjects, session=session)
 
 
 def load_aws_biopsy_and_diagnosis_dates(
