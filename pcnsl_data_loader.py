@@ -1160,7 +1160,9 @@ class AWSDataLoader:
 
         Returns:
             DataFrame with subject, session, sequence, and dcm2niix sidecar
-            fields. Units: TR/TE/TI in seconds, MagneticFieldStrength in T.
+            fields. Units: TR/TE/TI in milliseconds, MagneticFieldStrength in T.
+            (dcm2niix writes seconds; this method converts to ms for readability.
+            Gauss values >100 are corrected to Tesla.)
         """
         if subjects is None:
             subjects = self.list_imaging_subjects()
@@ -1183,7 +1185,22 @@ class AWSDataLoader:
                 except Exception:
                     continue
 
-        return pd.DataFrame(records)
+        df = pd.DataFrame(records)
+        if df.empty:
+            return df
+
+        # Convert TR/TE/TI from BIDS seconds to milliseconds for clinical readability
+        for col in ("RepetitionTime", "EchoTime", "InversionTime"):
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce") * 1000
+
+        # Some older GE scanners write MagneticFieldStrength in Gauss (>100) in DICOM;
+        # dcm2niix copies this value verbatim into the sidecar.  1 T = 10,000 G.
+        if "MagneticFieldStrength" in df.columns:
+            fs = pd.to_numeric(df["MagneticFieldStrength"], errors="coerce")
+            df["MagneticFieldStrength"] = fs.where(fs <= 100, fs / 10_000)
+
+        return df
 
 
 # =============================================================================
@@ -1363,7 +1380,7 @@ def load_aws_dicom_headers(
 
     Returns:
         DataFrame with subject, session, sequence, and dcm2niix sidecar fields.
-        Units: TR/TE/TI in seconds, MagneticFieldStrength in T.
+        Units: TR/TE/TI in milliseconds, MagneticFieldStrength in T.
 
     Example:
         >>> df = load_aws_dicom_headers()
