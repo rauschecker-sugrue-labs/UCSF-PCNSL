@@ -35,3 +35,6 @@ Thumbs.db
 *.csv
 *.png
 *.html
+*.pdf
+
+.claude

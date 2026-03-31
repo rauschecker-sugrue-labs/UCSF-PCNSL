@@ -12,6 +12,9 @@ dependencies = [
     "pandas>=2.0",
     "numpy>=1.24",
     "matplotlib>=3.7",
+    "great-tables>=0.21.0",
+    "tqdm>=4.67.3",
+    "seaborn>=0.13.2",
 ]
 
 [project.optional-dependencies]

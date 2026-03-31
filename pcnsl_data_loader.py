@@ -138,6 +138,29 @@ def parse_dicom_tag_json(path: str | Path) -> dict:
     return result
 
 
+def parse_dcm2niix_sidecar(path: str | Path) -> dict:
+    """
+    Parse a dcm2niix BIDS JSON sidecar into a flat dictionary.
+
+    Unlike parse_dicom_tag_json, this reads dcm2niix-processed values which
+    follow BIDS unit conventions:
+      - RepetitionTime / EchoTime / InversionTime: seconds
+      - MagneticFieldStrength: Tesla
+      - SliceThickness: millimetres
+
+    Pixel geometry (Rows, Columns, PixelSpacing) is not present in dcm2niix
+    output; use parse_dicom_tag_json for FOV and Matrix derivation.
+
+    Args:
+        path: Path to the dcm2niix JSON sidecar file.
+
+    Returns:
+        Dict of all fields as written by dcm2niix.
+    """
+    with open(path) as f:
+        return json.load(f)
+
+
 class PCNSLDataLoader:
     """
     A class for loading PCNSL neuroimaging data from the Box directory.
@@ -1124,18 +1147,20 @@ class AWSDataLoader:
         """
         Load DICOM header metadata for all subjects.
 
-        Reads JSON files from derivatives/pyalfe/sub-*/ses-*/dicom_headers/
+        Reads JSON files from derivatives/pyalfe/sub-*/ses-*/dcm2niix_sidecars/
         and returns a DataFrame with one row per series per subject.
+
+        Uses dcm2niix-processed values (BIDS unit conventions):
+          - TR/TE/TI in seconds, MagneticFieldStrength in Tesla.
+        For FOV/Matrix derivation use parse_dicom_tag_json against dicom_headers/.
 
         Args:
             subjects: Subject IDs. If None, loads all available.
             session: Session ID (default: 'ses-0001')
 
         Returns:
-            DataFrame with subject, session, sequence, and extracted DICOM
-            fields including derived Matrix, FOV_row_mm, FOV_col_mm, and
-            NumSlices. Units: TR/TE/TI in ms, MagneticFieldStrength in T,
-            distances in mm.
+            DataFrame with subject, session, sequence, and dcm2niix sidecar
+            fields. Units: TR/TE/TI in seconds, MagneticFieldStrength in T.
         """
         if subjects is None:
             subjects = self.list_imaging_subjects()
@@ -1144,12 +1169,12 @@ class AWSDataLoader:
         records = []
 
         for subject in subjects:
-            dicom_dir = derivatives_base / subject / session / "dicom_headers"
+            dicom_dir = derivatives_base / subject / session / "dcm2niix_sidecars"
             if not dicom_dir.exists():
                 continue
             for json_path in sorted(dicom_dir.glob("*.json")):
                 try:
-                    row = parse_dicom_tag_json(json_path)
+                    row = parse_dcm2niix_sidecar(json_path)
                     row["subject"] = subject
                     row["session"] = session
                     parts = json_path.stem.split("_")
@@ -1337,13 +1362,13 @@ def load_aws_dicom_headers(
         csv_path: Path to the CSV files directory
 
     Returns:
-        DataFrame with subject, session, sequence, and DICOM metadata.
-        Units: TR/TE/TI in ms, MagneticFieldStrength in T, distances in mm.
+        DataFrame with subject, session, sequence, and dcm2niix sidecar fields.
+        Units: TR/TE/TI in seconds, MagneticFieldStrength in T.
 
     Example:
         >>> df = load_aws_dicom_headers()
         >>> flair = df[df["sequence"] == "FLAIR"]
-        >>> print(flair[["subject", "Matrix", "FOV_row_mm", "FOV_col_mm"]].head())
+        >>> print(flair[["subject", "Manufacturer", "RepetitionTime", "InversionTime"]].head())
     """
     loader = AWSDataLoader(bids_path, csv_path)
     return loader.load_dicom_headers(subjects=subjects, session=session)
