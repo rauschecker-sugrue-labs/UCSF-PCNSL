@@ -124,23 +124,30 @@ def parse_dicom_tag_json(path: str | Path) -> dict:
     cols = result.get("Columns")
     spacing = result.get("PixelSpacing")
 
+    st_val = result.get("SliceThickness")
+
     if rows is not None and cols is not None:
         result["Matrix"] = f"{rows}x{cols}"
 
         if spacing is not None:
             ps = spacing if isinstance(spacing, list) else [spacing, spacing]
+            result["PixelSpacing_mm"] = ps[0]
             result["FOV_row_mm"] = round(rows * ps[0], 1)
             result["FOV_col_mm"] = round(cols * ps[1], 1)
+            if st_val is not None:
+                try:
+                    result["VoxelVolume_mm3"] = round(ps[0] * ps[1] * float(st_val), 4)
+                except (TypeError, ValueError):
+                    pass
 
     num_files = d.get("_consolidation_info", {}).get("num_files_in_series")
     if num_files is not None:
         result["NumSlices"] = num_files
 
     sbs = result.get("SpacingBetweenSlices")
-    st  = result.get("SliceThickness")
-    if sbs is not None and st is not None:
+    if sbs is not None and st_val is not None:
         try:
-            result["SliceGap_mm"] = round(float(sbs) - float(st), 3)
+            result["SliceGap_mm"] = round(float(sbs) - float(st_val), 3)
         except (TypeError, ValueError):
             pass
 
@@ -1203,8 +1210,9 @@ class AWSDataLoader:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce") * 1000
 
-        # Some older GE scanners write MagneticFieldStrength in Gauss (>100) in DICOM;
-        # dcm2niix copies this value verbatim into the sidecar.  1 T = 10,000 G.
+        # Some older GE scanners (e.g. GENESIS_SIGNA) store MagneticFieldStrength in
+        # Gauss rather than Tesla as the DICOM standard requires; dcm2niix copies the
+        # value verbatim.  1 T = 10,000 G, so any value >100 must be in Gauss.
         if "MagneticFieldStrength" in df.columns:
             fs = pd.to_numeric(df["MagneticFieldStrength"], errors="coerce")
             df["MagneticFieldStrength"] = fs.where(fs <= 100, fs / 10_000)
@@ -1450,14 +1458,6 @@ def load_aws_dicom_geometry(
                 parsed["subject"]  = subject
                 parsed["session"]  = session
                 parsed["sequence"] = "_".join(parts[2:])
-                spacing = parsed.get("PixelSpacing")
-                st = parsed.get("SliceThickness")
-                if spacing is not None and st is not None:
-                    ps = spacing if isinstance(spacing, list) else [spacing, spacing]
-                    try:
-                        parsed["VoxelVolume_mm3"] = round(ps[0] * ps[1] * float(st), 4)
-                    except (TypeError, ValueError):
-                        pass
                 records.append(parsed)
             except Exception:
                 continue
