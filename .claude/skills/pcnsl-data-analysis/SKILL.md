@@ -46,6 +46,24 @@ The UCSF-PCNSL dataset contains MRI data for 150 PCNSL patients (4 sequences eac
 - **SummaryLesions CSV format**: Vertical (Label, Value columns). `load_statistics_single()` transposes automatically, but direct CSV reads from S3 need manual handling.
 - **DICOM unit split**: `load_aws_dicom_headers()` returns TR/TE/TI in **milliseconds**. Raw dcm2niix sidecars use **seconds**.
 
+## Request Classification & Skill Routing
+
+**Before doing anything else, classify the user's request into one of these modes:**
+
+| Mode | Trigger keywords / intent | Action |
+|---|---|---|
+| **Data loading only** | load, access, read, fetch, import, explore dataset, list subjects, DICOM headers, CSV columns | Handle entirely within this skill |
+| **Statistical analysis** | test, compare, correlate, regress, predict, survival, significance, p-value, ANOVA, chi-square, effect size, power analysis, assumption check | Invoke the `statistical-analysis` skill (load data first if needed using this skill's guidance) |
+| **Visualization only** | plot, figure, chart, heatmap, boxplot, violin, scatter, bar chart, panel figure, publication figure | Invoke the `scientific-visualization` skill (load data first if needed using this skill's guidance) |
+| **Combined** | "compare and plot", "analyze and visualize", requests that clearly need both stats and figures | Load data with this skill, then invoke `statistical-analysis` and/or `scientific-visualization` as needed |
+
+### Routing rules
+
+1. **Statistics-only requests**: Load the relevant data using the Function Router below, then invoke the `statistical-analysis` skill with the loaded DataFrame and the user's analysis goal. Do not perform the statistical analysis yourself.
+2. **Visualization-only requests**: Load the relevant data using the Function Router below, then invoke the `scientific-visualization` skill with the loaded DataFrame and the user's figure requirements. Do not create the figure yourself.
+3. **Combined requests**: Load data first, then invoke the specialized skills in sequence — typically `statistical-analysis` first (to determine what to visualize), then `scientific-visualization`.
+4. **Preferred plotting library**: When the visualization skill delegates back for library choice, use `seaborn` by default. Fall back to `matplotlib` only when seaborn lacks the needed plot type or fine-grained control is required.
+
 ## References
 
 - See `references/api-reference.md` for full function signatures and type aliases

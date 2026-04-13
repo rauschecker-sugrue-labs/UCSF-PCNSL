@@ -33,6 +33,8 @@ Thumbs.db
 
 *.eps
 *.csv
+!data_dictionary_clinical.csv
+!data_dictionary_imaging.csv
 *.png
 *.html
 *.pdf
