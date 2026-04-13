@@ -37,4 +37,6 @@ Thumbs.db
 *.html
 *.pdf
 
-.claude
+.claude/settings*
+
+*.docx
