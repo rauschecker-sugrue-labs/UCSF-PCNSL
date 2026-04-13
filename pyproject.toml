@@ -15,6 +15,7 @@ dependencies = [
     "great-tables>=0.21.0",
     "tqdm>=4.67.3",
     "seaborn>=0.13.2",
+    "python-pptx>=1.0.2",
 ]
 
 [project.optional-dependencies]

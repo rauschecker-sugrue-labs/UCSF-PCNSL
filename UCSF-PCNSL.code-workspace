@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../Library/CloudStorage/Box-Box/Research/pcnsl_radiomics/dataset_manuscript/bids_dir_for_aws_anon"
+		},
+		{
+			"path": "../../Library/CloudStorage/Box-Box/Research/pcnsl_radiomics/dataset_manuscript/csvs_for_amazon_anonymized"
+		}
+	],
+    "settings": {}
+}
