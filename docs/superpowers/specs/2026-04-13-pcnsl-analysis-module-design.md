@@ -12,13 +12,14 @@ The module is **loosely coupled** to `pcnsl_data_loader.py` — all functions ac
 
 An `RModelBase` abstract base class handles all `rpy2` interop:
 
-- **`_ensure_r_packages()`** — module-level function, runs once on first use. Checks that R and `rpy2` are available; checks that required R packages (`mgcv`, `survival`, `glmnet`) are installed. Raises `ImportError` with actionable install instructions if anything is missing. Offers to install missing R packages via `utils.install.packages()`.
+- **`_ensure_r_packages(auto_install=False)`** — module-level function, runs once on first use. Checks that R and `rpy2` are available; checks that required R packages (`mgcv`, `survival`, `glmnet`) are installed. By default, raises `ImportError` with actionable install instructions listing the missing packages. If `auto_install=True` is passed (e.g., via the class constructor), installs missing R packages via `utils.install.packages()`. This avoids hanging in non-interactive/CI environments.
 - **`_pandas_to_r(df)`** — converts a pandas DataFrame to an R `data.frame`, handling NA, categorical, and numeric types correctly.
 - **`_r_to_pandas(r_obj)`** — converts R data.frames, matrices, and named vectors back to pandas objects.
-- **`_build_formula(target, predictors, smooth_terms, smooth_k)`** — constructs an R formula string. Linear terms are added directly; smooth terms are wrapped in `s(term, k=k)`. Returns an `robjects.Formula`.
+- **`_build_formula(lhs, predictors, smooth_terms, smooth_k)`** — constructs an R formula string. `lhs` is the left-hand side as a string — either a column name (e.g., `"y"`) or a complex expression (e.g., `"Surv(time, event)"`). Linear terms are added to the RHS directly; smooth terms are wrapped in `s(term, k=k)`. Returns an `robjects.Formula`. Note: `fit_penalized_cox()` bypasses this function because `glmnet` takes a design matrix + `Surv` response, not a formula — it constructs the model matrix via `model.matrix()` and the `Surv` object directly.
+- **`_build_model_matrix(df, predictors)`** — converts a pandas DataFrame to an R model matrix suitable for `glmnet`. Handles dummy-coding of categorical variables via `model.matrix()`. Used only by `fit_penalized_cox()`.
 
 **`RModelBase`** provides:
-- `__init__()` — activates `rpy2`, calls `_ensure_r_packages()`, loads R packages into the instance's R namespace.
+- `__init__()` — uses `rpy2.robjects.conversion.localconverter()` context manager pattern (not global `pandas2ri.activate()`) for all pandas-R conversions. Calls `_ensure_r_packages()`, loads R packages into the instance's R namespace.
 - `fit()` — abstract, overridden by subclasses.
 - `predict(new_data)` — abstract, overridden by subclasses.
 - `summary()` — abstract, overridden by subclasses.
@@ -51,7 +52,7 @@ class GAMModel(RModelBase):
     def predict(
         self,
         new_data: pd.DataFrame = None,
-        type: str = "response",
+        pred_type: str = "response",
         se_fit: bool = True,
     ) -> pd.DataFrame: ...
 
@@ -109,8 +110,9 @@ class MutationImputer(RModelBase):
 
 - **One model per gene:** Fits a separate binomial GAM for each column in `gene_columns`. Each column should be binary (1=mutated, 0=wild-type).
 - **Conservative smooth basis:** Default `smooth_k` should be 5-6 (not `mgcv`'s default of 10) given the small training set (n=64). Overfitting is the primary risk.
-- **Built-in cross-validation:** CV is mandatory, not optional. With n=64, honest performance estimates are required before trusting imputation downstream. Stores per-gene AUC, Brier score, and calibration metrics.
-- **Threshold selection:** `"youden"` (maximize sensitivity + specificity - 1) is the default. `"prevalence"` matches the observed mutation rate. A float sets a fixed threshold.
+- **Minimum mutation count:** Genes with fewer than 5 mutations in the training data are skipped with a warning (too few positive cases for meaningful modeling). These genes appear in `summary()` with `cv_auc=NaN` and a note.
+- **Built-in cross-validation:** CV is mandatory, not optional. With n=64, honest performance estimates are required before trusting imputation downstream. Uses **stratified** folds to preserve the positive-class ratio in each fold (critical for imbalanced genes). Stores per-gene AUC, Brier score, and calibration metrics. If a per-gene GAM fails to converge during CV, that fold is skipped with a warning; if all folds fail, the gene is skipped entirely.
+- **Threshold selection:** `"youden"` (maximize sensitivity + specificity - 1) is the default. `"prevalence"` sets the threshold equal to the observed mutation rate in the training data, so `P(mutation) > prevalence` classifies as mutated. A float sets a fixed threshold directly.
 - **`predict()`** returns a DataFrame with `{gene}_prob` (predicted probability) and `{gene}_imputed` (binary call) columns for each gene.
 - **`summary()`** returns a per-gene table: gene, n_mutated, n_total, prevalence, cv_auc, cv_auc_ci_lo, cv_auc_ci_hi, cv_brier_score, selected_threshold, sensitivity, specificity.
 - **`plot_cv_performance()`** shows ROC curves with AUC and calibration plots per gene.
@@ -179,15 +181,20 @@ class SurvivalModel(RModelBase):
 - `aft_summary()` returns per-predictor: `coef`, `se`, `z`, `p_value`, `time_ratio`, `tr_ci_lo`, `tr_ci_hi`, plus `scale` and `distribution`.
 - `compare_aft_distributions()` fits all three distributions and returns an AIC/BIC comparison table to guide distribution choice.
 
-**Separate fit methods** (`fit_km`, `fit_cox`, `fit_penalized_cox`, `fit_aft`) rather than one polymorphic `fit()` — these are genuinely different analyses a user would choose deliberately.
+**Separate fit methods** (`fit_km`, `fit_cox`, `fit_penalized_cox`, `fit_aft`) rather than one polymorphic `fit()` — these are genuinely different analyses a user would choose deliberately. All return `-> "SurvivalModel"` for chaining.
+
+**Multi-model state management:** Each fit method stores its result under a distinct attribute: `self.km_model_`, `self.cox_model_`, `self.penalized_cox_model_`, `self.aft_model_`. A single `SurvivalModel` instance can hold all four simultaneously. Summary/plot methods raise `RuntimeError("No KM model fitted. Call fit_km() first.")` (etc.) if the corresponding model attribute is `None`.
+
+**`compare_aft_distributions()`** is self-contained — it accepts all arguments and does not depend on prior `fit_aft()` state. This is intentional: it fits three models internally for comparison and does not mutate `self.aft_model_`.
 
 ---
 
 ## Dependencies
 
-**Python (add to `pyproject.toml`):**
+**Python (add to `pyproject.toml` as an optional dependency):**
 ```toml
-"rpy2>=3.5",
+[project.optional-dependencies]
+analysis = ["rpy2>=3.5,<4"]
 ```
 
 **R packages (installed at runtime by `_ensure_r_packages()`):**
@@ -199,19 +206,30 @@ class SurvivalModel(RModelBase):
 
 ## Module Exports
 
-Update `__init__.py` to add:
+Update `__init__.py` with a guarded import so users without `rpy2` can still use the rest of the package:
 
 ```python
-from .pcnsl_analysis import GAMModel, MutationImputer, SurvivalModel
+try:
+    from .pcnsl_analysis import GAMModel, MutationImputer, SurvivalModel
+except ImportError:
+    pass
 ```
+
+Users without `rpy2` can still `from tutorials import PCNSLDataLoader`. Users who need analysis import directly: `from pcnsl_analysis import GAMModel`.
 
 ## Plotting
 
 All plots render via matplotlib (not R graphics devices) so they work natively in Jupyter notebooks and can be saved with `plt.savefig()`. The R models provide the data; Python handles rendering.
 
+## Missing Data (NA) Handling
+
+All three frameworks use a consistent NA strategy: **drop rows with any NA in the target or predictor columns before fitting, and emit a warning stating how many rows were dropped.** This is equivalent to R's `na.action=na.omit` but made explicit on the Python side so the user sees the impact before R processes the data. The original DataFrame is never mutated — a filtered copy is passed to R.
+
+For `predict()`, rows with NA in predictor columns get `NaN` in the output (no prediction) with a warning.
+
 ## Error Handling
 
 - Missing R or `rpy2`: clear `ImportError` at instantiation time with install instructions.
-- Missing R packages: automatic install prompt via `utils.install.packages()`.
+- Missing R packages: raises `ImportError` with install instructions by default. If `auto_install=True` is passed to the constructor, installs missing R packages via `utils.install.packages()`.
 - Unfitted model access (calling `summary()` before `fit()`): `RuntimeError("Model not fitted. Call fit() first.")`.
 - Column not found in DataFrame: `ValueError` with the missing column name and available columns.
