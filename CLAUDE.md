@@ -9,8 +9,11 @@ This is a research repository for the **UCSF Primary CNS Lymphoma (PCNSL) MRI Da
 - `figures_for_manuscript.ipynb` — generates all publication tables and figures
 - `get-to-know-a-dataset-pcnsl.ipynb` — interactive tutorial for exploring the dataset
 - Data dictionaries (`data_dictionary_clinical.csv`, `data_dictionary_imaging.csv`)
+- `docs/superpowers/specs/2026-04-13-pcnsl-analysis-module-design.md` — design spec for the planned `pcnsl_analysis.py` module (not yet implemented)
 
 The cohort is 150 subjects (64 UCSF500 genomic + 86 non-UCSF500), each with 4 MRI sequences (FLAIR, T1w, ce-gadolinium T1w, DWI ADC).
+
+**Important:** The S3 dataset contains only processed derivatives under `derivatives/pyalfe/` — raw MRI NIfTI files are not distributed.
 
 ## Setup
 
@@ -21,7 +24,7 @@ uv sync                        # Install core dependencies
 uv sync --extra dev            # Include Jupyter support
 ```
 
-Key dependencies: `boto3`, `nibabel`, `nilearn`, `pandas`, `numpy`, `matplotlib`, `seaborn`, `great-tables`, `tqdm`.
+Key dependencies: `boto3`, `nibabel`, `nilearn`, `pandas`, `numpy`, `matplotlib`, `seaborn`, `great-tables`, `tqdm`, `python-pptx`, `lifelines`, `pygam`.
 
 To run notebooks:
 ```bash
@@ -121,6 +124,16 @@ Defined at module top — used as `Literal` constraints throughout the API:
 - `combined_lesion_data.csv` — aggregated lesion + radiomics data (150 subjects × 238 columns)
 
 **`get-to-know-a-dataset-pcnsl.ipynb`** — interactive tutorial covering S3 access, image loading, visualization, and DICOM header exploration.
+
+### Planned: `pcnsl_analysis.py`
+
+A design spec exists at `docs/superpowers/specs/2026-04-13-pcnsl-analysis-module-design.md` for a new analysis module. It is **not yet implemented**. When built, it will provide three classes:
+
+- **`GAMModel`** — generalized additive model wrapper (`pyGAM`): linear, logistic, Poisson, Gamma families; spline terms; grid-search lambda selection; partial dependence plots.
+- **`MutationImputer`** — predicts binary gene mutation status for non-UCSF500 subjects using imaging/clinical features; one `LogisticGAM` per gene with stratified CV and threshold selection.
+- **`SurvivalModel`** — survival analysis suite (`lifelines`): Kaplan-Meier, Cox PH (standard + elastic net penalized), AFT models (Weibull/LogNormal/LogLogistic).
+
+All classes accept plain DataFrames — no internal data loading. `lifelines` and `pygam` are already in `pyproject.toml` as core dependencies.
 
 ### `__init__.py` Exports
 

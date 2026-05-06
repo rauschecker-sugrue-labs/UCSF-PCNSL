@@ -9,30 +9,33 @@ This directory contains tutorials and utilities for working with the UCSF Primar
 
 ## Dataset Overview
 
-The PCNSL dataset contains MRI data from patients with primary CNS lymphoma, organized in BIDS (Brain Imaging Data Structure) format:
+The PCNSL dataset contains derived MRI data from patients with primary CNS lymphoma, organized in BIDS (Brain Imaging Data Structure) format. Note that raw MRI files are not distributed — the dataset consists entirely of processed derivatives under `derivatives/pyalfe/`:
 
 ```
 s3://ucsf-pcnsl/
-├── sub-XXXX/
-│   └── ses-YYYY/
-│       └── anat/
-│           ├── sub-XXXX_ses-YYYY_T1w.nii.gz
-│           ├── sub-XXXX_ses-YYYY_ce-gadolinium_T1w.nii.gz
-│           └── sub-XXXX_ses-YYYY_FLAIR.nii.gz
 └── derivatives/
     └── pyalfe/
         └── sub-XXXX/
             └── ses-YYYY/
-                ├── statistics/          # Lesion measurements (CSV)
-                ├── skullstripped/       # Brain-extracted images
-                └── masks/               # Lesion segmentation masks
+                ├── dicom_headers/           # Raw DICOM tag JSONs (DCMQ prefix)
+                ├── dcm2niix_sidecars/       # dcm2niix BIDS JSONs (acquisition params)
+                ├── masks/
+                │   └── lesions_seg_comp/    # Connected-component labeled lesion masks
+                ├── skullstripped/
+                │   ├── lesions_FLAIR_space/ # 4 sequences registered to FLAIR
+                │   └── lesions_T1Post_space/# 4 sequences registered to T1Post (ce-gadolinium)
+                └── statistics/
+                    ├── lesions_SummaryLesions/   # 2 CSVs (FLAIR + T1Post)
+                    ├── lesions_IndividualLesions/ # 2 CSVs (FLAIR + T1Post)
+                    └── lesions_radiomics/         # 2 CSVs (FLAIR + T1Post)
 ```
 
-### MRI Sequences
+### Image Spaces
 
-- **T1w**: T1-weighted structural image
-- **ce-gadolinium_T1w**: Gadolinium-enhanced (post-contrast) T1-weighted image
-- **FLAIR**: Fluid-attenuated inversion recovery image
+The skull-stripped images and lesion masks are registered to one of two reference spaces:
+
+- **FLAIR space**: All sequences registered to the FLAIR image
+- **T1Post space**: All sequences registered to the gadolinium-enhanced T1w image
 
 ### Derived Data
 
@@ -99,10 +102,10 @@ def load_nifti_from_s3(bucket, key, s3_client):
     Path(tmp_path).unlink()
     return img
 
-# Load a FLAIR image
+# Load a skull-stripped FLAIR image (registered to FLAIR space)
 subject = "sub-0001"
 session = "ses-0001"
-flair_key = f"{subject}/{session}/anat/{subject}_{session}_FLAIR.nii.gz"
+flair_key = f"derivatives/pyalfe/{subject}/{session}/skullstripped/lesions_FLAIR_space/{subject}_{session}_FLAIR.nii.gz"
 flair_img = load_nifti_from_s3(bucket, flair_key, s3)
 
 print(f"Image shape: {flair_img.shape}")
@@ -114,7 +117,7 @@ print(f"Image shape: {flair_img.shape}")
 from nilearn import plotting
 import matplotlib.pyplot as plt
 
-# Display the FLAIR image
+# Display the skull-stripped FLAIR image
 plotting.plot_anat(flair_img, title="FLAIR Image", display_mode='ortho')
 plt.show()
 

@@ -16,6 +16,8 @@ dependencies = [
     "tqdm>=4.67.3",
     "seaborn>=0.13.2",
     "python-pptx>=1.0.2",
+    "lifelines>=0.30.0",
+    "pygam>=0.12.0",
 ]
 
 [project.optional-dependencies]
