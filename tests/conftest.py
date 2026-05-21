@@ -1,8 +1,8 @@
 """
 Shared fixtures for pcnsl_data_loader and figures_for_manuscript tests.
 
-Creates minimal fake BIDS directory structures and CSV files that exercise
-the data-loading and figure-generation code without needing real data.
+Creates minimal fake dataset structures matching pcnsl-dataset_v1.0 layout
+(pyalfe derivatives + clinical CSVs) without needing real data.
 """
 
 import json
@@ -18,71 +18,60 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
 @pytest.fixture
-def tmp_bids_dir(tmp_path):
-    """Create a minimal BIDS directory structure with 3 fake subjects."""
-    bids = tmp_path / "bids"
+def tmp_pyalfe_dir(tmp_path):
+    """Create a minimal pyalfe directory structure with 3 fake subjects.
+
+    Matches pcnsl-dataset_v1.0 layout:
+        pyalfe/sub-XXXX/ses-YYYY/
+            statistics/lesions_{SummaryLesions,IndividualLesions,radiomics}/
+            masks/lesions_seg_comp/
+            skullstripped/lesions_{FLAIR,T1Post}_space/
+            dcm2niix_sidecars/
+            dicom_headers/
+    """
+    pyalfe = tmp_path / "pyalfe"
     subjects = ["sub-0001", "sub-0002", "sub-0003"]
     session = "ses-0001"
-    sequences = ["T1w", "ce-gadolinium_T1w", "FLAIR"]
 
     for subj in subjects:
-        # Raw anatomy
-        anat_dir = bids / subj / session / "anat"
-        anat_dir.mkdir(parents=True)
-        for seq in sequences:
-            img = nib.Nifti1Image(np.zeros((4, 4, 4), dtype=np.float32), np.eye(4))
-            nib.save(img, anat_dir / f"{subj}_{session}_{seq}.nii.gz")
+        base = pyalfe / subj / session
 
-        # DWI
-        dwi_dir = bids / subj / session / "dwi"
-        dwi_dir.mkdir(parents=True)
-        img = nib.Nifti1Image(np.zeros((4, 4, 4), dtype=np.float32), np.eye(4))
-        nib.save(img, dwi_dir / f"{subj}_{session}_ADC.nii.gz")
-
-        # Derivatives (no {auto|human} subdirectory for AWS layout)
-        deriv_base = bids / "derivatives" / "pyalfe" / subj / session
-
-        # Statistics - SummaryLesions
+        # Statistics
         for modality in ("FLAIR", "T1Post"):
-            stats_dir = deriv_base / "statistics" / "lesions_SummaryLesions"
+            stats_dir = base / "statistics" / "lesions_SummaryLesions"
             stats_dir.mkdir(parents=True, exist_ok=True)
-            summary_df = pd.DataFrame({
+            pd.DataFrame({
                 "metric": ["total_lesion_volume", "number_of_lesions",
                            "lesion_volume_in_White Matter", "lesion_volume_in_Frontal"],
                 "value": [5000.0, 3, 3500.0, 1200.0],
-            })
-            summary_df.to_csv(
+            }).to_csv(
                 stats_dir / f"{subj}_{session}_{modality}_SummaryLesions.csv",
                 index=False,
             )
 
-            # Statistics - radiomics
-            rad_dir = deriv_base / "statistics" / "lesions_radiomics"
+            rad_dir = base / "statistics" / "lesions_radiomics"
             rad_dir.mkdir(parents=True, exist_ok=True)
-            radiomics_df = pd.DataFrame({
+            pd.DataFrame({
                 "original_firstorder_Kurtosis": [2.5],
                 "original_firstorder_Entropy": [4.1],
                 "original_firstorder_Energy": [1e6],
-            })
-            radiomics_df.to_csv(
+            }).to_csv(
                 rad_dir / f"{subj}_{session}_{modality}_radiomics.csv",
                 index=False,
             )
 
-            # Statistics - IndividualLesions
-            ind_dir = deriv_base / "statistics" / "lesions_IndividualLesions"
+            ind_dir = base / "statistics" / "lesions_IndividualLesions"
             ind_dir.mkdir(parents=True, exist_ok=True)
-            ind_df = pd.DataFrame({
+            pd.DataFrame({
                 "lesion_id": [1, 2, 3],
                 "volume": [2000.0, 1500.0, 1500.0],
-            })
-            ind_df.to_csv(
+            }).to_csv(
                 ind_dir / f"{subj}_{session}_{modality}_IndividualLesions.csv",
                 index=False,
             )
 
         # Masks
-        masks_dir = deriv_base / "masks" / "lesions_seg_comp"
+        masks_dir = base / "masks" / "lesions_seg_comp"
         masks_dir.mkdir(parents=True, exist_ok=True)
         for modality in ("FLAIR", "T1Post"):
             mask_img = nib.Nifti1Image(
@@ -95,7 +84,7 @@ def tmp_bids_dir(tmp_path):
 
         # Skullstripped
         for space in ("FLAIR", "T1Post"):
-            ss_dir = deriv_base / "skullstripped" / f"lesions_{space}_space"
+            ss_dir = base / "skullstripped" / f"lesions_{space}_space"
             ss_dir.mkdir(parents=True, exist_ok=True)
             for seq in ("T1", "T1Post", "FLAIR", "ADC"):
                 img = nib.Nifti1Image(
@@ -107,7 +96,7 @@ def tmp_bids_dir(tmp_path):
                 )
 
         # dcm2niix sidecars
-        sidecar_dir = deriv_base / "dcm2niix_sidecars"
+        sidecar_dir = base / "dcm2niix_sidecars"
         sidecar_dir.mkdir(parents=True, exist_ok=True)
         for seq in ("FLAIR", "T1w", "ce-gadolinium_T1w", "DWI_ADC"):
             sidecar = {
@@ -125,8 +114,8 @@ def tmp_bids_dir(tmp_path):
             with open(sidecar_dir / f"{subj}_{session}_{seq}.json", "w") as f:
                 json.dump(sidecar, f)
 
-        # Raw DICOM tag JSONs
-        dicom_dir = deriv_base / "dicom_headers"
+        # DICOM tag JSONs (no DCMQ_ prefix in v1.0 layout)
+        dicom_dir = base / "dicom_headers"
         dicom_dir.mkdir(parents=True, exist_ok=True)
         for seq in ("FLAIR", "T1w", "ce-gadolinium_T1w", "DWI_ADC"):
             dicom_json = {
@@ -147,10 +136,10 @@ def tmp_bids_dir(tmp_path):
                 },
                 "_consolidation_info": {"num_files_in_series": 30},
             }
-            with open(dicom_dir / f"DCMQ_{subj}_{session}_{seq}.json", "w") as f:
+            with open(dicom_dir / f"{subj}_{session}_{seq}.json", "w") as f:
                 json.dump(dicom_json, f)
 
-    return bids
+    return pyalfe
 
 
 @pytest.fixture
@@ -159,7 +148,6 @@ def tmp_csv_dir(tmp_path):
     csv_dir = tmp_path / "csvs"
     csv_dir.mkdir()
 
-    # demographics.csv
     pd.DataFrame({
         "patientdurablekey": [1, 2, 3],
         "Sex": ["Female", "Male", "Female"],
@@ -172,7 +160,6 @@ def tmp_csv_dir(tmp_path):
         "SecondRace": [np.nan, np.nan, np.nan],
     }).to_csv(csv_dir / "demographics.csv", index=False)
 
-    # biopsy_and_diagnosis_dates.csv
     pd.DataFrame({
         "patientdurablekey": [1, 2, 3],
         "accession": ["0001", "0002", "0003"],
@@ -183,28 +170,24 @@ def tmp_csv_dir(tmp_path):
         "DiagnosisDateMinusImageDate": [36, 4, 312],
     }).to_csv(csv_dir / "biopsy_and_diagnosis_dates.csv", index=False)
 
-    # diagnosis_history.csv
     pd.DataFrame({
         "patientdurablekey": [1, 1, 2, 3],
         "DiagnosisCode": ["C85.1", "C85.1", "C85.1", "C85.1"],
         "DiagnosisDate": ["8/26/21", "9/1/21", "1/9/21", "3/20/22"],
     }).to_csv(csv_dir / "diagnosis_history.csv", index=False)
 
-    # medication_list_administered.csv
     pd.DataFrame({
         "patientdurablekey": [1, 1, 2, 3],
         "MedicationGenericName": ["dexamethasone", "methotrexate", "rituximab", "dexamethasone"],
         "AdministrationInstant": ["8/26/21 10:00", "9/1/21 14:00", "1/9/21 08:00", "3/20/22 09:00"],
     }).to_csv(csv_dir / "medication_list_administered.csv", index=False)
 
-    # medication_list_ordered.csv
     pd.DataFrame({
         "patientdurablekey": [1, 2, 3],
         "MedicationGenericName": ["dexamethasone", "rituximab", "methotrexate"],
         "OrderInstant": ["8/26/21", "1/9/21", "3/20/22"],
     }).to_csv(csv_dir / "medication_list_ordered.csv", index=False)
 
-    # ucsf500_mutations.csv
     pd.DataFrame({
         "patientdurablekey": [1, 1, 2, 2, 2],
         "gene": ["MYD88", "CD79B", "MYD88", "PIM1", "TBL1XR1"],
@@ -214,7 +197,6 @@ def tmp_csv_dir(tmp_path):
         "microsatellitestatus": ["MS-Stable", "MS-Stable", "MS-Stable", "MS-Stable", "MS-Stable"],
     }).to_csv(csv_dir / "ucsf500_mutations.csv", index=False)
 
-    # Data dictionaries
     pd.DataFrame({
         "variable": ["patientdurablekey", "Sex", "BirthDate"],
         "description": ["Patient ID", "Sex assigned at birth", "Date of birth"],
@@ -229,14 +211,14 @@ def tmp_csv_dir(tmp_path):
 
 
 @pytest.fixture
-def pcnsl_loader(tmp_bids_dir):
-    """Create a PCNSLDataLoader with the fake BIDS directory."""
-    from pcnsl_data_loader import PCNSLDataLoader
-    return PCNSLDataLoader(tmp_bids_dir)
+def pcnsl_loader(tmp_pyalfe_dir):
+    """Create an AWSDataLoader with only pyalfe path (no CSVs needed for imaging tests)."""
+    from pcnsl_data_loader import AWSDataLoader
+    return AWSDataLoader(pyalfe_path=tmp_pyalfe_dir, csv_path=None)
 
 
 @pytest.fixture
-def aws_loader(tmp_bids_dir, tmp_csv_dir):
-    """Create an AWSDataLoader with the fake BIDS + CSV directories."""
+def aws_loader(tmp_pyalfe_dir, tmp_csv_dir):
+    """Create an AWSDataLoader with the fake pyalfe + CSV directories."""
     from pcnsl_data_loader import AWSDataLoader
-    return AWSDataLoader(bids_path=tmp_bids_dir, csv_path=tmp_csv_dir)
+    return AWSDataLoader(pyalfe_path=tmp_pyalfe_dir, csv_path=tmp_csv_dir)

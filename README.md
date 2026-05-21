@@ -4,31 +4,41 @@ This directory contains tutorials and utilities for working with the UCSF Primar
 
 ## Contents
 
-- **[get-to-know-a-dataset-pcnsl.ipynb](get-to-know-a-dataset-pcnsl.ipynb)** - Interactive Jupyter notebook tutorial demonstrating how to access and work with the PCNSL dataset from AWS S3
-- **[pcnsl_data_loader.py](pcnsl_data_loader.py)** - Python module with utilities for loading PCNSL neuroimaging data
+- **[get-to-know-a-dataset-pcnsl.ipynb](get-to-know-a-dataset-pcnsl.ipynb)** - Interactive Jupyter notebook tutorial demonstrating how to access and work with the PCNSL dataset
+- **[figures_for_manuscript.ipynb](figures_for_manuscript.ipynb)** - Generates all publication tables and figures
+- **[pcnsl_data_loader.py](pcnsl_data_loader.py)** - Python module with utilities for loading PCNSL neuroimaging and clinical data
 
 ## Dataset Overview
 
-The PCNSL dataset contains derived MRI data from patients with primary CNS lymphoma, organized in BIDS (Brain Imaging Data Structure) format. Note that raw MRI files are not distributed — the dataset consists entirely of processed derivatives under `derivatives/pyalfe/`:
+The PCNSL dataset contains derived MRI data from 150 patients with primary CNS lymphoma. Raw MRI files are not distributed — the dataset consists entirely of processed derivatives:
 
 ```
-s3://ucsf-pcnsl/
-└── derivatives/
-    └── pyalfe/
-        └── sub-XXXX/
-            └── ses-YYYY/
-                ├── dicom_headers/           # Raw DICOM tag JSONs (DCMQ prefix)
-                ├── dcm2niix_sidecars/       # dcm2niix BIDS JSONs (acquisition params)
-                ├── masks/
-                │   └── lesions_seg_comp/    # Connected-component labeled lesion masks
-                ├── skullstripped/
-                │   ├── lesions_FLAIR_space/ # 4 sequences registered to FLAIR
-                │   └── lesions_T1Post_space/# 4 sequences registered to T1Post (ce-gadolinium)
-                └── statistics/
-                    ├── lesions_SummaryLesions/   # 2 CSVs (FLAIR + T1Post)
-                    ├── lesions_IndividualLesions/ # 2 CSVs (FLAIR + T1Post)
-                    └── lesions_radiomics/         # 2 CSVs (FLAIR + T1Post)
+pcnsl-dataset_v1.0/
+├── pyalfe/                              # Imaging derivatives
+│   └── sub-XXXX/ses-YYYY/
+│       ├── dicom_headers/               # Raw DICOM tag JSONs
+│       ├── dcm2niix_sidecars/           # dcm2niix BIDS JSONs (acquisition params)
+│       ├── masks/
+│       │   └── lesions_seg_comp/        # Connected-component labeled lesion masks
+│       ├── skullstripped/
+│       │   ├── lesions_FLAIR_space/     # 4 sequences registered to FLAIR
+│       │   └── lesions_T1Post_space/    # 4 sequences registered to T1Post (ce-gadolinium)
+│       └── statistics/
+│           ├── lesions_SummaryLesions/  # 2 CSVs (FLAIR + T1Post)
+│           ├── lesions_IndividualLesions/
+│           └── lesions_radiomics/       # PyRadiomics texture features
+└── csvs_for_amazon_anonymized/          # Clinical CSVs
+    ├── demographics.csv
+    ├── biopsy_and_diagnosis_dates.csv
+    ├── diagnosis_history.csv
+    ├── medication_list_administered.csv
+    ├── medication_list_ordered.csv
+    ├── ucsf500_mutations.csv
+    ├── data_dictionary_clinical.csv
+    └── data_dictionary_imaging.csv
 ```
+
+The same structure is available on S3 under `s3://ucsf-pcnsl/derivatives/pyalfe/`.
 
 ### Image Spaces
 
@@ -45,17 +55,17 @@ The skull-stripped images and lesion masks are registered to one of two referenc
 
 ## Installation
 
-### Using pip
+This project uses `uv` for dependency management:
 
 ```bash
-pip install boto3 nibabel nilearn pandas numpy matplotlib
+uv sync                        # Install core dependencies
+uv sync --extra dev            # Include Jupyter support
 ```
 
-### Using Poetry
+Or install with pip:
 
 ```bash
-cd tutorials
-poetry install
+pip install boto3 nibabel nilearn pandas numpy matplotlib seaborn great-tables tqdm
 ```
 
 ### Requirements
@@ -74,6 +84,42 @@ For Jupyter notebook support:
 
 ## Quick Start
 
+### Using the Data Loader (local data)
+
+```python
+from pcnsl_data_loader import AWSDataLoader
+
+# Load from default pcnsl-dataset_v1.0 directory
+loader = AWSDataLoader()
+
+# List subjects
+subjects = loader.list_subjects()
+print(f"Found {len(subjects)} subjects")
+
+# Load clinical data merged with imaging subject info
+df = loader.load_merged_data()
+
+# Load DICOM headers for all subjects
+dicom_df = loader.load_dicom_headers()
+```
+
+### Using Convenience Functions
+
+```python
+from pcnsl_data_loader import (
+    load_aws_demographics,
+    load_aws_mutations,
+    load_aws_dicom_headers,
+    load_aws_dicom_geometry,
+)
+
+# Each returns a DataFrame with all subjects
+demographics = load_aws_demographics()
+mutations = load_aws_mutations()
+dicom_headers = load_aws_dicom_headers()
+geometry = load_aws_dicom_geometry()
+```
+
 ### Accessing Data from AWS S3
 
 ```python
@@ -84,7 +130,7 @@ from pathlib import Path
 from botocore import UNSIGNED
 from botocore.config import Config
 
-# Connect to the public S3 bucket
+# Connect to the public S3 bucket (no authentication needed)
 bucket = "ucsf-pcnsl"
 s3 = boto3.client('s3', config=Config(signature_version=UNSIGNED))
 
@@ -102,10 +148,10 @@ def load_nifti_from_s3(bucket, key, s3_client):
     Path(tmp_path).unlink()
     return img
 
-# Load a skull-stripped FLAIR image (registered to FLAIR space)
+# Load a skull-stripped FLAIR image
 subject = "sub-0001"
 session = "ses-0001"
-flair_key = f"derivatives/pyalfe/{subject}/{session}/skullstripped/lesions_FLAIR_space/{subject}_{session}_FLAIR.nii.gz"
+flair_key = f"derivatives/pyalfe/{subject}/{session}/skullstripped/lesions_FLAIR_space/{subject}_{session}_FLAIR_to_FLAIR_skullstripped.nii.gz"
 flair_img = load_nifti_from_s3(bucket, flair_key, s3)
 
 print(f"Image shape: {flair_img.shape}")
@@ -120,49 +166,20 @@ import matplotlib.pyplot as plt
 # Display the skull-stripped FLAIR image
 plotting.plot_anat(flair_img, title="FLAIR Image", display_mode='ortho')
 plt.show()
-
-# Load and overlay lesion mask
-mask_key = f"derivatives/pyalfe/{subject}/{session}/masks/lesions_seg_comp/{subject}_{session}_FLAIR_lesions.nii.gz"
-lesion_mask = load_nifti_from_s3(bucket, mask_key, s3)
-
-plotting.plot_roi(
-    lesion_mask,
-    bg_img=flair_img,
-    title="FLAIR with Lesion Overlay",
-    alpha=0.5,
-    cmap='hot'
-)
-plt.show()
 ```
 
-### Loading Statistics
+## Running the Notebooks
 
-```python
-import pandas as pd
-import io
-
-# Load summary lesion statistics
-stats_key = f"derivatives/pyalfe/{subject}/{session}/statistics/SummaryLesions_FLAIR.csv"
-response = s3.get_object(Bucket=bucket, Key=stats_key)
-summary_stats = pd.read_csv(io.BytesIO(response['Body'].read()))
-
-print(summary_stats)
+```bash
+jupyter notebook get-to-know-a-dataset-pcnsl.ipynb
+jupyter notebook figures_for_manuscript.ipynb
 ```
 
-## Running the Tutorial Notebook
+## Running Tests
 
-1. Install Jupyter and register the kernel:
-   ```bash
-   pip install jupyter ipykernel
-   python -m ipykernel install --user --name=pcnsl-tutorial --display-name="PCNSL Tutorial"
-   ```
-
-2. Launch Jupyter:
-   ```bash
-   jupyter notebook get-to-know-a-dataset-pcnsl.ipynb
-   ```
-
-3. Select the "PCNSL Tutorial" kernel and run the cells.
+```bash
+uv run python -m pytest tests/ -v
+```
 
 ## Resources
 

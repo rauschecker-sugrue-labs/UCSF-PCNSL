@@ -418,11 +418,11 @@ class TestEndToEndPipeline:
         assert len(top_genes) > 0
         assert top_genes.iloc[0] >= top_genes.iloc[-1]
 
-    def test_dicom_geometry_pipeline(self, tmp_bids_dir):
+    def test_dicom_geometry_pipeline(self, tmp_pyalfe_dir):
         """Test geometry loading pipeline as used in Table S3."""
         from pcnsl_data_loader import load_aws_dicom_geometry
 
-        geom_df = load_aws_dicom_geometry(bids_path=tmp_bids_dir)
+        geom_df = load_aws_dicom_geometry(pyalfe_path=tmp_pyalfe_dir)
         assert geom_df["sequence"].nunique() == 4
         assert "PixelSpacing_mm" in geom_df.columns
         assert "VoxelVolume_mm3" in geom_df.columns
