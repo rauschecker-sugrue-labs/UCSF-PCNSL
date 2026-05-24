@@ -55,32 +55,14 @@ The skull-stripped images and lesion masks are registered to one of two referenc
 
 ## Installation
 
-This project uses `uv` for dependency management:
+This project uses [`uv`](https://docs.astral.sh/uv/) for dependency management. `uv` is strongly recommended — it reads `uv.lock` to guarantee reproducible installs.
 
 ```bash
 uv sync                        # Install core dependencies
 uv sync --extra dev            # Include Jupyter support
 ```
 
-Or install with pip:
-
-```bash
-pip install boto3 nibabel nilearn pandas numpy matplotlib seaborn great-tables tqdm
-```
-
-### Requirements
-
-- Python >= 3.10
-- boto3 >= 1.38.23
-- nibabel >= 5.0.0
-- nilearn >= 0.10.0
-- pandas >= 2.0.0
-- numpy >= 1.24.0
-- matplotlib >= 3.7.0
-
-For Jupyter notebook support:
-- jupyter >= 1.0
-- ipykernel >= 6.0
+> **Without uv:** See `pyproject.toml` for the full dependency list and install with `pip install <packages>`. Python >= 3.10 required.
 
 ## Quick Start
 
@@ -180,6 +162,31 @@ jupyter notebook figures_for_manuscript.ipynb
 ```bash
 uv run python -m pytest tests/ -v
 ```
+
+## AI-Assisted Analysis (Claude Code)
+
+This repo includes a project-local [Claude Code](https://claude.ai/code) skill at `.claude/skills/pcnsl-data-analysis/` that gives Claude deep knowledge of the PCNSL dataset API, common gotchas, and analysis patterns.
+
+**No installation required.** Claude Code discovers project-local skills automatically when run inside this directory. Just open Claude Code here and describe your task — or invoke the skill explicitly with `/pcnsl-data-analysis`.
+
+### What the skill covers
+
+| Request type | Examples |
+|---|---|
+| Data loading | demographics, mutations, lesion stats, radiomics, DICOM headers/geometry, biopsy dates |
+| API gotchas | date century correction, GE field-strength unit conversion, SummaryLesions CSV orientation, TR/TE millisecond vs. second units |
+| Statistical analysis | delegates to `statistical-analysis` skill (if installed) |
+| Visualization | delegates to `scientific-visualization` skill (if installed) |
+
+### Example prompts
+
+```
+"Load the lesion summary statistics for FLAIR and plot a boxplot of lesion volume"
+"Compare ADC values between UCSF500 and non-UCSF500 subjects"
+"Show mutation frequency across the 64 genomic subjects"
+```
+
+The skill handles all data loading on its own. For richer statistical and visualization workflows, install the [superpowers skill ecosystem](https://github.com/obra/superpowers) — the PCNSL skill will automatically delegate to `statistical-analysis` and `scientific-visualization` when they are present.
 
 ## Resources
 

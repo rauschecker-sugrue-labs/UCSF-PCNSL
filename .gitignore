@@ -52,10 +52,9 @@ pcnsl-dataset_v1.0/
 
 *code-workspace
 
-audits
+audits/
 
 \.pytest_cache
-\.claude
 docs
 
 UCSF-PCNSL*
