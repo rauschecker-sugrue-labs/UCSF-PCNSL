@@ -165,8 +165,8 @@ class TestSubjectDiscovery:
         with pytest.raises(FileNotFoundError):
             pcnsl_loader.list_sessions("sub-9999")
 
-    def test_list_subjects_with_processing_none(self, pcnsl_loader):
-        subjects = pcnsl_loader.list_subjects_with_processing(processing=None)
+    def test_list_subjects_with_statistics(self, pcnsl_loader):
+        subjects = pcnsl_loader.list_subjects_with_statistics()
         assert len(subjects) == 3
 
     def test_list_imaging_subjects(self, aws_loader):
@@ -187,22 +187,22 @@ class TestSubjectDiscovery:
 
 
 class TestStatisticsLoading:
-    def test_get_statistics_path_no_processing(self, pcnsl_loader, tmp_pyalfe_dir):
-        path = pcnsl_loader.get_statistics_path("sub-0001", processing=None)
+    def test_get_statistics_path(self, pcnsl_loader, tmp_pyalfe_dir):
+        path = pcnsl_loader.get_statistics_path("sub-0001")
         expected = tmp_pyalfe_dir / "sub-0001" / "ses-0001" / "statistics"
         assert path == expected
 
     def test_load_statistics_single(self, pcnsl_loader):
         df = pcnsl_loader.load_statistics_single(
-            "sub-0001", stats_type="SummaryLesions", modality="FLAIR", processing=None
+            "sub-0001", stats_type="SummaryLesions", modality="FLAIR"
         )
         assert "subject" in df.columns
         assert df["subject"].iloc[0] == "sub-0001"
 
-    def test_load_statistics_single_missing_file(self, pcnsl_loader):
+    def test_load_statistics_single_missing_subject(self, pcnsl_loader):
         with pytest.raises(FileNotFoundError):
             pcnsl_loader.load_statistics_single(
-                "sub-0001", stats_type="SummaryLesions", modality="FLAIR", processing="auto"
+                "sub-9999", stats_type="SummaryLesions", modality="FLAIR"
             )
 
     def test_load_statistics_multiple(self, pcnsl_loader):
@@ -210,13 +210,12 @@ class TestStatisticsLoading:
             subjects=["sub-0001", "sub-0002"],
             stats_type="IndividualLesions",
             modality="FLAIR",
-            processing=None,
         )
         assert len(df) == 6  # 3 lesions × 2 subjects
 
     def test_load_statistics_all_subjects(self, pcnsl_loader):
         df = pcnsl_loader.load_statistics(
-            subjects=None, stats_type="IndividualLesions", modality="T1Post", processing=None
+            subjects=None, stats_type="IndividualLesions", modality="T1Post"
         )
         assert df["subject"].nunique() == 3
 
@@ -225,7 +224,6 @@ class TestStatisticsLoading:
             subjects=["sub-0001", "sub-9999"],
             stats_type="SummaryLesions",
             modality="FLAIR",
-            processing=None,
             ignore_missing=True,
         )
         assert df["subject"].nunique() == 1
@@ -236,9 +234,63 @@ class TestStatisticsLoading:
                 subjects=["sub-9999"],
                 stats_type="SummaryLesions",
                 modality="FLAIR",
-                processing=None,
                 ignore_missing=False,
             )
+
+    def test_load_statistics_sessions_length_mismatch(self, pcnsl_loader):
+        with pytest.raises(ValueError, match="must have equal length"):
+            pcnsl_loader.load_statistics(
+                subjects=["sub-0001", "sub-0002"],
+                sessions=["ses-0001"],  # length 1 vs subjects length 2
+                stats_type="SummaryLesions",
+                modality="FLAIR",
+            )
+
+    def test_load_statistics_all_missing_ignore_true_returns_empty(self, pcnsl_loader):
+        df = pcnsl_loader.load_statistics(
+            subjects=["sub-9999", "sub-8888"],
+            stats_type="SummaryLesions",
+            modality="FLAIR",
+            ignore_missing=True,
+        )
+        assert isinstance(df, pd.DataFrame)
+        assert len(df) == 0
+
+
+# =============================================================================
+# Multi-Sequence Lesion Data
+# =============================================================================
+
+
+class TestMultisequenceLesionData:
+    def test_default_returns_wide_dataframe(self, pcnsl_loader):
+        df = pcnsl_loader.load_multisequence_lesion_data()
+        assert "subject" in df.columns
+        assert "session" in df.columns
+        flair_cols = [c for c in df.columns if c.endswith("_FLAIR")]
+        t1post_cols = [c for c in df.columns if c.endswith("_T1Post")]
+        assert len(flair_cols) > 0
+        assert len(t1post_cols) > 0
+        assert len(df) == 3
+
+    def test_single_modality(self, pcnsl_loader):
+        df = pcnsl_loader.load_multisequence_lesion_data(modalities=["FLAIR"])
+        t1post_cols = [c for c in df.columns if c.endswith("_T1Post")]
+        assert len(t1post_cols) == 0
+
+    def test_single_stats_type(self, pcnsl_loader):
+        df = pcnsl_loader.load_multisequence_lesion_data(stats_types=["SummaryLesions"])
+        radiomics_cols = [c for c in df.columns if "firstorder" in c]
+        assert len(radiomics_cols) == 0
+
+    def test_specific_subjects(self, pcnsl_loader):
+        df = pcnsl_loader.load_multisequence_lesion_data(subjects=["sub-0001"])
+        assert len(df) == 1
+        assert df["subject"].iloc[0] == "sub-0001"
+
+    def test_missing_filled_with_na(self, pcnsl_loader):
+        df = pcnsl_loader.load_multisequence_lesion_data()
+        assert df.isna().sum().sum() == 0
 
 
 # =============================================================================
@@ -248,13 +300,13 @@ class TestStatisticsLoading:
 
 class TestMaskLoading:
     def test_load_lesion_mask(self, pcnsl_loader):
-        mask = pcnsl_loader.load_lesion_mask("sub-0001", processing=None, modality="FLAIR")
+        mask = pcnsl_loader.load_lesion_mask("sub-0001", modality="FLAIR")
         assert isinstance(mask, nib.Nifti1Image)
         assert mask.shape == (4, 4, 4)
 
     def test_load_lesion_mask_missing(self, pcnsl_loader):
         with pytest.raises(FileNotFoundError):
-            pcnsl_loader.load_lesion_mask("sub-9999", processing=None)
+            pcnsl_loader.load_lesion_mask("sub-9999")
 
 
 # =============================================================================
@@ -264,28 +316,22 @@ class TestMaskLoading:
 
 class TestSkullstrippedLoading:
     def test_list_skullstripped_images(self, pcnsl_loader):
-        images = pcnsl_loader.list_skullstripped_images(
-            "sub-0001", processing=None, space="FLAIR"
-        )
+        images = pcnsl_loader.list_skullstripped_images("sub-0001", space="FLAIR")
         assert len(images) == 4  # T1, T1Post, FLAIR, ADC
 
     def test_load_skullstripped_image(self, pcnsl_loader):
         img = pcnsl_loader.load_skullstripped_image(
-            "sub-0001", processing=None, space="FLAIR", sequence="ADC"
+            "sub-0001", space="FLAIR", sequence="ADC"
         )
         assert isinstance(img, nib.Nifti1Image)
 
     def test_load_skullstripped_images_dict(self, pcnsl_loader):
-        images = pcnsl_loader.load_skullstripped_images(
-            "sub-0001", processing=None, space="T1Post"
-        )
+        images = pcnsl_loader.load_skullstripped_images("sub-0001", space="T1Post")
         assert "FLAIR" in images
         assert "ADC" in images
 
     def test_load_image_with_mask(self, pcnsl_loader):
-        img, mask = pcnsl_loader.load_image_with_mask(
-            "sub-0001", processing=None, modality="FLAIR"
-        )
+        img, mask = pcnsl_loader.load_image_with_mask("sub-0001", modality="FLAIR")
         assert isinstance(img, nib.Nifti1Image)
         assert isinstance(mask, nib.Nifti1Image)
 
@@ -360,6 +406,20 @@ class TestDataMerging:
         df = aws_loader.load_mutations_for_imaging_subjects()
         assert "gene" in df.columns
         assert len(df) == 5
+
+    def test_load_merged_data_csv_path_none(self, pcnsl_loader):
+        # imaging-only loader: load_merged_data should return subject/session DataFrame
+        # rather than crashing when csv_path is None
+        df = pcnsl_loader.load_merged_data()
+        assert "subject" in df.columns
+        assert "session" in df.columns
+        assert len(df) == 3
+
+    def test_load_merged_data_no_row_multiplication(self, aws_loader):
+        # ucsf500_mutations has 2 rows for patient 1 and 3 rows for patient 2;
+        # merging on patientdurablekey must not row-multiply the imaging subjects
+        df = aws_loader.load_merged_data(clinical_types=["ucsf500_mutations"])
+        assert len(df) == 3  # one row per imaging subject, not per mutation
 
 
 # =============================================================================
@@ -458,6 +518,15 @@ class TestConvenienceFunctions:
             pyalfe_path=tmp_pyalfe_dir, csv_path=tmp_csv_dir
         )
         assert len(df) == 12
+
+    def test_load_aws_multisequence_lesion_data(self, tmp_pyalfe_dir):
+        import pcnsl_data_loader
+
+        df = pcnsl_data_loader.load_aws_multisequence_lesion_data(
+            pyalfe_path=tmp_pyalfe_dir
+        )
+        assert len(df) == 3
+        assert any(c.endswith("_FLAIR") for c in df.columns)
 
     def test_load_aws_biopsy_and_diagnosis_dates(self, tmp_csv_dir, tmp_pyalfe_dir):
         import pcnsl_data_loader

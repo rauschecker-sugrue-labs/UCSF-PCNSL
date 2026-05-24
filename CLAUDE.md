@@ -112,7 +112,6 @@ All accept optional `pyalfe_path=` and `csv_path=` kwargs (defaulting to the `pc
 Defined at module top — used as `Literal` constraints throughout the API:
 - `StatisticsType`: `SummaryLesions`, `IndividualLesions`, `radiomics`
 - `Modality`: `FLAIR`, `T1Post`
-- `ProcessingType`: `auto`, `human`
 - `ImageSpace`: `FLAIR`, `T1Post`
 - `ClinicalDataType`: `demographics`, `biopsy_and_diagnosis_dates`, `diagnosis_history`, `medication_list_administered`, `medication_list_ordered`, `ucsf500_mutations`
 

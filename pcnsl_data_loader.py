@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Literal
 
 import nibabel as nib
-import numpy as np
 import pandas as pd
 
 # Default paths (relative to this file's location)
@@ -24,7 +23,6 @@ DEFAULT_CSV_PATH = DEFAULT_DATASET_PATH / "csvs_for_amazon_anonymized"
 # Type aliases
 StatisticsType = Literal["IndividualLesions", "SummaryLesions", "radiomics"]
 Modality = Literal["FLAIR", "T1Post"]
-ProcessingType = Literal["auto", "human", None]
 ImageSpace = Literal["FLAIR", "T1Post"]
 ClinicalDataType = Literal[
     "demographics",
@@ -236,20 +234,21 @@ class AWSDataLoader:
         else:
             self.csv_path = None
 
-    def _derivatives_base(
-        self, subject: str, session: str = "ses-0001", processing: ProcessingType = None
-    ) -> Path:
-        base = self.pyalfe_path / subject / session
-        if processing is not None:
-            base = base / processing
-        return base
+        self._subjects_cache: list[str] | None = None
+        self._stats_subjects_cache: list[str] | None = None
+
+    def _derivatives_base(self, subject: str, session: str = "ses-0001") -> Path:
+        return self.pyalfe_path / subject / session
 
     # --- Subject/Session Discovery ---
 
     def list_subjects(self) -> list[str]:
         """List all subject IDs in sorted order."""
-        subject_dirs = sorted(self.pyalfe_path.glob("sub-*"))
-        return [d.name for d in subject_dirs if d.is_dir()]
+        if self._subjects_cache is None:
+            self._subjects_cache = [
+                d.name for d in sorted(self.pyalfe_path.glob("sub-*")) if d.is_dir()
+            ]
+        return self._subjects_cache
 
     def list_imaging_subjects(self) -> list[str]:
         """List all subjects with imaging data."""
@@ -263,21 +262,17 @@ class AWSDataLoader:
         session_dirs = sorted(subject_path.glob("ses-*"))
         return [d.name for d in session_dirs if d.is_dir()]
 
-    def list_subjects_with_processing(
-        self, processing: ProcessingType = None
-    ) -> list[str]:
-        """List subjects that have the specified processing type available."""
-        subjects = []
-        for subject_dir in sorted(self.pyalfe_path.glob("sub-*")):
-            for session_dir in subject_dir.glob("ses-*"):
-                if processing is None:
+    def list_subjects_with_statistics(self) -> list[str]:
+        """List subjects that have statistics data available."""
+        if self._stats_subjects_cache is None:
+            subjects = []
+            for subject_dir in sorted(self.pyalfe_path.glob("sub-*")):
+                for session_dir in subject_dir.glob("ses-*"):
                     if (session_dir / "statistics").exists():
                         subjects.append(subject_dir.name)
                         break
-                elif (session_dir / processing).exists():
-                    subjects.append(subject_dir.name)
-                    break
-        return subjects
+            self._stats_subjects_cache = subjects
+        return self._stats_subjects_cache
 
     def get_subject_session_list(self) -> pd.DataFrame:
         """Get DataFrame of all subject/session/accession combinations."""
@@ -290,14 +285,9 @@ class AWSDataLoader:
 
     # --- Statistics Loading ---
 
-    def get_statistics_path(
-        self,
-        subject: str,
-        session: str = "ses-0001",
-        processing: ProcessingType = None,
-    ) -> Path:
+    def get_statistics_path(self, subject: str, session: str = "ses-0001") -> Path:
         """Get path to the statistics directory for a subject/session."""
-        return self._derivatives_base(subject, session, processing) / "statistics"
+        return self._derivatives_base(subject, session) / "statistics"
 
     def load_statistics_single(
         self,
@@ -305,10 +295,9 @@ class AWSDataLoader:
         session: str = "ses-0001",
         stats_type: StatisticsType = "SummaryLesions",
         modality: Modality = "FLAIR",
-        processing: ProcessingType = None,
     ) -> pd.DataFrame:
         """Load statistics for a single subject/session."""
-        stats_path = self.get_statistics_path(subject, session, processing)
+        stats_path = self.get_statistics_path(subject, session)
         subdir = f"lesions_{stats_type}"
         filename = f"{subject}_{session}_{modality}_{stats_type}.csv"
         filepath = stats_path / subdir / filename
@@ -318,16 +307,14 @@ class AWSDataLoader:
 
         df = pd.read_csv(filepath)
 
-        if stats_type == "SummaryLesions":
-            if df.columns[0] == "Unnamed: 0":
-                df = df.set_index("Unnamed: 0")
-                df = df.T
-                df.index = [0]
+        if stats_type in ("SummaryLesions", "radiomics") and df.shape[1] == 2 and len(df) > 1:
+            df = df.set_index(df.columns[0]).T
+            df.index = [0]
+            df.columns.name = None
 
         df["subject"] = subject
         df["session"] = session
         df["modality"] = modality
-        df["processing"] = processing
 
         return df
 
@@ -337,7 +324,6 @@ class AWSDataLoader:
         sessions: str | list[str] | None = None,
         stats_type: StatisticsType = "SummaryLesions",
         modality: Modality = "FLAIR",
-        processing: ProcessingType = None,
         ignore_missing: bool = True,
     ) -> pd.DataFrame:
         """
@@ -348,11 +334,10 @@ class AWSDataLoader:
             sessions: Session ID(s). If None, uses 'ses-0001' for all.
             stats_type: 'IndividualLesions', 'SummaryLesions', or 'radiomics'
             modality: 'FLAIR' or 'T1Post'
-            processing: 'auto', 'human', or None
             ignore_missing: If True, skip missing files; if False, raise error
         """
         if subjects is None:
-            subjects = self.list_subjects_with_processing(processing)
+            subjects = self.list_subjects_with_statistics()
         elif isinstance(subjects, str):
             subjects = [subjects]
 
@@ -361,12 +346,15 @@ class AWSDataLoader:
         elif isinstance(sessions, str):
             sessions = [sessions] * len(subjects)
 
+        if len(subjects) != len(sessions):
+            raise ValueError(
+                f"subjects ({len(subjects)}) and sessions ({len(sessions)}) must have equal length"
+            )
+
         dfs = []
         for subject, session in zip(subjects, sessions):
             try:
-                df = self.load_statistics_single(
-                    subject, session, stats_type, modality, processing
-                )
+                df = self.load_statistics_single(subject, session, stats_type, modality)
                 dfs.append(df)
             except FileNotFoundError as e:
                 if ignore_missing:
@@ -374,9 +362,60 @@ class AWSDataLoader:
                 raise e
 
         if not dfs:
+            if ignore_missing:
+                return pd.DataFrame()
             raise ValueError("No statistics files found for the given parameters")
 
         return pd.concat(dfs, ignore_index=True)
+
+    def load_multisequence_lesion_data(
+        self,
+        subjects: str | list[str] | None = None,
+        sessions: str | list[str] | None = None,
+        stats_types: list[StatisticsType] | None = None,
+        modalities: list[Modality] | None = None,
+        ignore_missing: bool = True,
+    ) -> pd.DataFrame:
+        """
+        Load lesion statistics across multiple sequences in wide format.
+
+        Returns one row per subject-session with feature columns suffixed by modality
+        (e.g., total_lesion_volume_FLAIR, total_lesion_volume_T1Post).
+        """
+        if stats_types is None:
+            stats_types = ["SummaryLesions", "radiomics"]
+        if modalities is None:
+            modalities = ["FLAIR", "T1Post"]
+
+        merged = None
+        id_cols = ["subject", "session"]
+
+        for stats_type in stats_types:
+            for modality in modalities:
+                df = self.load_statistics(
+                    subjects=subjects,
+                    sessions=sessions,
+                    stats_type=stats_type,
+                    modality=modality,
+                    ignore_missing=ignore_missing,
+                )
+                if df.empty:
+                    continue
+
+                df = df.drop(columns=["modality"], errors="ignore")
+                feature_cols = [c for c in df.columns if c not in id_cols]
+                df = df.rename(columns={c: f"{c}_{modality}" for c in feature_cols})
+
+                if merged is None:
+                    merged = df
+                else:
+                    merged = merged.merge(df, on=id_cols, how="outer")
+
+        if merged is None:
+            return pd.DataFrame()
+
+        merged = merged.fillna("N/A")
+        return merged
 
     # --- Skullstripped Image Loading ---
 
@@ -384,21 +423,19 @@ class AWSDataLoader:
         self,
         subject: str,
         session: str = "ses-0001",
-        processing: ProcessingType = None,
         space: ImageSpace = "FLAIR",
     ) -> Path:
         """Get path to the skullstripped images directory."""
-        return self._derivatives_base(subject, session, processing) / "skullstripped" / f"lesions_{space}_space"
+        return self._derivatives_base(subject, session) / "skullstripped" / f"lesions_{space}_space"
 
     def list_skullstripped_images(
         self,
         subject: str,
         session: str = "ses-0001",
-        processing: ProcessingType = None,
         space: ImageSpace = "FLAIR",
     ) -> list[Path]:
         """List all skullstripped NIfTI files for a subject in a given space."""
-        path = self.get_skullstripped_path(subject, session, processing, space)
+        path = self.get_skullstripped_path(subject, session, space)
         if not path.exists():
             raise FileNotFoundError(f"Skullstripped directory not found: {path}")
         return sorted(path.glob("*.nii.gz"))
@@ -407,12 +444,11 @@ class AWSDataLoader:
         self,
         subject: str,
         session: str = "ses-0001",
-        processing: ProcessingType = None,
         space: ImageSpace = "FLAIR",
         sequence: Literal["T1", "T1Post", "FLAIR", "ADC"] = "FLAIR",
     ) -> nib.Nifti1Image:
         """Load a specific skullstripped image by sequence and space."""
-        path = self.get_skullstripped_path(subject, session, processing, space)
+        path = self.get_skullstripped_path(subject, session, space)
         pattern = f"*_{sequence}_to_{space}_skullstripped.nii.gz"
         matches = list(path.glob(pattern))
 
@@ -428,12 +464,11 @@ class AWSDataLoader:
         self,
         subject: str,
         session: str = "ses-0001",
-        processing: ProcessingType = None,
         space: ImageSpace = "FLAIR",
     ) -> dict[str, nib.Nifti1Image]:
         """Load all skullstripped images, returning {sequence: image} dict."""
         images = {}
-        for filepath in self.list_skullstripped_images(subject, session, processing, space):
+        for filepath in self.list_skullstripped_images(subject, session, space):
             match = re.search(r"_([A-Za-z0-9]+)_to_", filepath.name)
             if match:
                 sequence = match.group(1)
@@ -442,24 +477,18 @@ class AWSDataLoader:
 
     # --- Lesion Mask Loading ---
 
-    def get_masks_path(
-        self,
-        subject: str,
-        session: str = "ses-0001",
-        processing: ProcessingType = None,
-    ) -> Path:
+    def get_masks_path(self, subject: str, session: str = "ses-0001") -> Path:
         """Get path to the lesion masks directory."""
-        return self._derivatives_base(subject, session, processing) / "masks" / "lesions_seg_comp"
+        return self._derivatives_base(subject, session) / "masks" / "lesions_seg_comp"
 
     def load_lesion_mask(
         self,
         subject: str,
         session: str = "ses-0001",
-        processing: ProcessingType = None,
         modality: Modality = "FLAIR",
     ) -> nib.Nifti1Image:
         """Load the lesion segmentation mask for a subject/session."""
-        path = self.get_masks_path(subject, session, processing)
+        path = self.get_masks_path(subject, session)
         pattern = f"*_{modality}_abnormal_seg_comp.nii.gz"
         matches = list(path.glob(pattern))
 
@@ -474,14 +503,13 @@ class AWSDataLoader:
         self,
         subject: str,
         session: str = "ses-0001",
-        processing: ProcessingType = None,
         modality: Modality = "FLAIR",
     ) -> tuple[nib.Nifti1Image, nib.Nifti1Image]:
         """Load a skullstripped image with its corresponding lesion mask."""
         image = self.load_skullstripped_image(
-            subject, session, processing, space=modality, sequence=modality
+            subject, session, space=modality, sequence=modality
         )
-        mask = self.load_lesion_mask(subject, session, processing, modality=modality)
+        mask = self.load_lesion_mask(subject, session, modality=modality)
         return image, mask
 
     # --- Clinical Data Loading ---
@@ -559,7 +587,6 @@ class AWSDataLoader:
         include_imaging_stats: bool = False,
         stats_type: StatisticsType = "SummaryLesions",
         modality: Modality = "FLAIR",
-        processing: ProcessingType = None,
     ) -> pd.DataFrame:
         """
         Load and merge clinical data with imaging subject information.
@@ -570,9 +597,10 @@ class AWSDataLoader:
             include_imaging_stats: If True, also merge imaging statistics
             stats_type: Type of imaging statistics to include
             modality: Imaging modality for statistics
-            processing: Processing type for statistics
         """
-        if clinical_types is None:
+        if self.csv_path is None:
+            clinical_types = []
+        elif clinical_types is None:
             clinical_types = ["demographics", "biopsy_and_diagnosis_dates"]
 
         base_df = self.get_subject_session_list()
@@ -599,13 +627,15 @@ class AWSDataLoader:
             if dup_col in merged.columns:
                 merged = merged.drop(columns=[dup_col])
 
+            if config.get("has_accessions"):
+                merged = merged.drop_duplicates(subset=["subject", "session"], keep="first")
+
         if include_imaging_stats:
             try:
                 stats_df = self.load_statistics(
                     subjects=None,
                     stats_type=stats_type,
                     modality=modality,
-                    processing=processing,
                     ignore_missing=True,
                 )
                 merged = merged.merge(
@@ -714,12 +744,25 @@ def load_aws_dicom_geometry(
     Uses dicom_headers/ (not dcm2niix_sidecars/) because pixel geometry
     is absent from dcm2niix output.
     """
-    pyalfe_base = Path(pyalfe_path)
+    loader = AWSDataLoader(pyalfe_path=pyalfe_path, csv_path=None)
     if subjects is None:
-        subjects = sorted(d.name for d in pyalfe_base.glob("sub-*") if d.is_dir())
+        subjects = loader.list_subjects()
 
-    df = _load_json_series(pyalfe_base, subjects, session, "dicom_headers", parse_dicom_tag_json)
+    df = _load_json_series(loader.pyalfe_path, subjects, session, "dicom_headers", parse_dicom_tag_json)
     return df
+
+
+def load_aws_multisequence_lesion_data(
+    subjects: str | list[str] | None = None,
+    stats_types: list[StatisticsType] | None = None,
+    modalities: list[Modality] | None = None,
+    pyalfe_path: str | Path = DEFAULT_PYALFE_PATH,
+) -> pd.DataFrame:
+    """Load multi-sequence lesion statistics in wide format (one row per subject-session)."""
+    loader = AWSDataLoader(pyalfe_path=pyalfe_path, csv_path=None)
+    return loader.load_multisequence_lesion_data(
+        subjects=subjects, stats_types=stats_types, modalities=modalities
+    )
 
 
 def load_aws_biopsy_and_diagnosis_dates(
@@ -728,17 +771,8 @@ def load_aws_biopsy_and_diagnosis_dates(
     pyalfe_path: str | Path = DEFAULT_PYALFE_PATH,
 ) -> pd.DataFrame:
     """Load biopsy and diagnosis dates from the dataset."""
-    filepath = Path(csv_path) / "biopsy_and_diagnosis_dates.csv"
-    if not filepath.exists():
-        raise FileNotFoundError(f"Biopsy and diagnosis dates file not found: {filepath}")
-
-    df = pd.read_csv(filepath)
-
-    if filter_to_imaging_subjects:
-        loader = AWSDataLoader(pyalfe_path=pyalfe_path, csv_path=csv_path)
-        mapping = loader.get_patient_accession_mapping()
-        imaging_patients = set(mapping["patientdurablekey"])
-        df["patientdurablekey"] = df["patientdurablekey"].astype(str).str.zfill(4)
-        df = df[df["patientdurablekey"].isin(imaging_patients)]
-
-    return df
+    loader = AWSDataLoader(pyalfe_path=pyalfe_path, csv_path=csv_path)
+    return loader.load_clinical_data(
+        "biopsy_and_diagnosis_dates",
+        filter_to_imaging_subjects=filter_to_imaging_subjects,
+    )

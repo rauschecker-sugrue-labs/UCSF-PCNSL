@@ -41,9 +41,9 @@ def tmp_pyalfe_dir(tmp_path):
             stats_dir = base / "statistics" / "lesions_SummaryLesions"
             stats_dir.mkdir(parents=True, exist_ok=True)
             pd.DataFrame({
-                "metric": ["total_lesion_volume", "number_of_lesions",
-                           "lesion_volume_in_White Matter", "lesion_volume_in_Frontal"],
-                "value": [5000.0, 3, 3500.0, 1200.0],
+                "Label": ["total_lesion_volume", "number_of_lesions",
+                          "lesion_volume_in_White Matter", "lesion_volume_in_Frontal"],
+                "Value": [5000.0, 3, 3500.0, 1200.0],
             }).to_csv(
                 stats_dir / f"{subj}_{session}_{modality}_SummaryLesions.csv",
                 index=False,
@@ -52,9 +52,10 @@ def tmp_pyalfe_dir(tmp_path):
             rad_dir = base / "statistics" / "lesions_radiomics"
             rad_dir.mkdir(parents=True, exist_ok=True)
             pd.DataFrame({
-                "original_firstorder_Kurtosis": [2.5],
-                "original_firstorder_Entropy": [4.1],
-                "original_firstorder_Energy": [1e6],
+                "Label": ["original_firstorder_Kurtosis",
+                          "original_firstorder_Entropy",
+                          "original_firstorder_Energy"],
+                "Value": [2.5, 4.1, 1e6],
             }).to_csv(
                 rad_dir / f"{subj}_{session}_{modality}_radiomics.csv",
                 index=False,
