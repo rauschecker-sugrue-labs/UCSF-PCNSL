@@ -51,3 +51,11 @@ submission1/
 pcnsl-dataset_v1.0
 
 *code-workspace
+
+audits
+
+.pytest_cache
+.claude
+docs
+
+UCSF-PCNSL*
