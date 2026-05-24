@@ -44,18 +44,18 @@ Thumbs.db
 *.docx
 *.pptx
 
-scratch
-docs
+scratch/
+docs/
 
 submission1/
-pcnsl-dataset_v1.0
+pcnsl-dataset_v1.0/
 
 *code-workspace
 
 audits
 
-.pytest_cache
-.claude
+\.pytest_cache
+\.claude
 docs
 
 UCSF-PCNSL*
