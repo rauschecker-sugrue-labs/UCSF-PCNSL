@@ -32,26 +32,10 @@ import pytest
 
 
 class TestDateParsing:
-    def test_parse_date_with_century_normal(self):
-        """Dates like 3/13/73 should parse to 1973, not 2073."""
-        dt = pd.to_datetime("3/13/73", format="%m/%d/%y")
-        if dt.year > 2025:
-            dt = dt.replace(year=dt.year - 100)
-        assert dt.year == 1973
-
-    def test_parse_date_with_century_recent(self):
-        """Dates like 8/26/21 should remain 2021."""
-        dt = pd.to_datetime("8/26/21", format="%m/%d/%y")
-        if dt.year > 2025:
-            dt = dt.replace(year=dt.year - 100)
-        assert dt.year == 2021
-
-    def test_parse_date_with_century_boundary(self):
-        """Dates in 2025 should stay as-is."""
-        dt = pd.to_datetime("1/1/25", format="%m/%d/%y")
-        if dt.year > 2025:
-            dt = dt.replace(year=dt.year - 100)
-        assert dt.year == 2025
+    def test_iso_dates_need_no_century_correction(self):
+        """Released CSVs use 4-digit ISO dates, so 1973 births parse as 1973."""
+        assert pd.to_datetime("1973-03-13", format="%Y-%m-%d").year == 1973
+        assert pd.to_datetime("2021-08-26", format="%Y-%m-%d").year == 2021
 
 
 class TestTable1Demographics:
@@ -64,8 +48,8 @@ class TestTable1Demographics:
             "Sex": ["Female", "Male", "Female"],
             "FirstRace": ["White", "White", "Other"],
             "Ethnicity": ["Not Hispanic or Latino", "Hispanic or Latino", "Not Hispanic or Latino"],
-            "BirthDate": ["3/13/73", "5/23/62", "2/13/51"],
-            "DiagnosisDate": ["8/26/21", "1/9/21", "3/20/22"],
+            "BirthDate": ["1973-03-13", "1962-05-23", "1951-02-13"],
+            "DiagnosisDate": ["2021-08-26", "2021-01-09", "2022-03-20"],
             "DiagnosisDateMinusImageDate": [36, 4, 312],
             "BiopsyDateMinusImageDate": [np.nan, 2.0, 291.0],
         })
@@ -74,16 +58,8 @@ class TestTable1Demographics:
     def test_age_at_diagnosis_calculation(self, sample_clinical_df):
         df = sample_clinical_df.copy()
 
-        def parse_date_with_century(date_str):
-            if pd.isna(date_str):
-                return pd.NaT
-            dt = pd.to_datetime(date_str, format="%m/%d/%y")
-            if dt.year > 2025:
-                dt = dt.replace(year=dt.year - 100)
-            return dt
-
-        df["BirthDateParsed"] = df["BirthDate"].apply(parse_date_with_century)
-        df["DiagnosisDateParsed"] = pd.to_datetime(df["DiagnosisDate"], format="%m/%d/%y")
+        df["BirthDateParsed"] = pd.to_datetime(df["BirthDate"], format="%Y-%m-%d")
+        df["DiagnosisDateParsed"] = pd.to_datetime(df["DiagnosisDate"], format="%Y-%m-%d")
         df["AgeAtDiagnosis"] = (df["DiagnosisDateParsed"] - df["BirthDateParsed"]).dt.days / 365.25
 
         assert df["AgeAtDiagnosis"].iloc[0] == pytest.approx(48.4, abs=0.5)

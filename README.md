@@ -10,7 +10,7 @@ This directory contains tutorials and utilities for working with the UCSF Primar
 
 ## Dataset Overview
 
-The PCNSL dataset contains derived MRI data from 150 patients with primary CNS lymphoma. Raw MRI files are not distributed — the dataset consists entirely of processed derivatives:
+The PCNSL dataset contains derived MRI data from 149 patients with primary CNS lymphoma. Raw MRI files are not distributed — the dataset consists entirely of processed derivatives:
 
 ```
 pcnsl-dataset_v1.0/
@@ -27,7 +27,7 @@ pcnsl-dataset_v1.0/
 │           ├── lesions_SummaryLesions/  # 2 CSVs (FLAIR + T1Post)
 │           ├── lesions_IndividualLesions/
 │           └── lesions_radiomics/       # PyRadiomics texture features
-└── csvs_for_amazon_anonymized/          # Clinical CSVs
+└── clinical/                            # Clinical CSVs (participant_id first column; ISO 8601 dates)
     ├── demographics.csv
     ├── biopsy_and_diagnosis_dates.csv
     ├── diagnosis_history.csv

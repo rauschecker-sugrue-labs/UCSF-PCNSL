@@ -11,7 +11,7 @@ This is a research repository for the **UCSF Primary CNS Lymphoma (PCNSL) MRI Da
 - Data dictionaries (`data_dictionary_clinical.csv`, `data_dictionary_imaging.csv`)
 - `docs/superpowers/specs/2026-04-13-pcnsl-analysis-module-design.md` — design spec for the planned `pcnsl_analysis.py` module (not yet implemented)
 
-The cohort is 150 subjects (64 UCSF500 genomic + 86 non-UCSF500), each with 4 MRI sequences (FLAIR, T1w, ce-gadolinium T1w, DWI ADC).
+The cohort is 149 subjects (64 UCSF500 genomic + 85 non-UCSF500; one pediatric non-PCNSL subject was removed and later IDs renumbered on 2026-11-11), each with 4 MRI sequences (FLAIR, T1w, ce-gadolinium T1w, DWI ADC).
 
 **Important:** The dataset contains only processed derivatives — raw MRI NIfTI files are not distributed.
 
@@ -56,7 +56,7 @@ pcnsl-dataset_v1.0/
 │           ├── lesions_SummaryLesions/  # 2 CSVs (FLAIR + T1Post)
 │           ├── lesions_IndividualLesions/
 │           └── lesions_radiomics/
-└── csvs_for_amazon_anonymized/          # Clinical CSVs
+└── clinical/                            # Clinical CSVs (participant_id first column; ISO 8601 dates)
     ├── demographics.csv
     ├── biopsy_and_diagnosis_dates.csv
     ├── diagnosis_history.csv
@@ -73,7 +73,7 @@ pcnsl-dataset_v1.0/
 
 - **`AWSDataLoader`** — handles all data loading. Accepts two paths:
   - `pyalfe_path` — root of the pyalfe derivatives directory (default: `pcnsl-dataset_v1.0/pyalfe`)
-  - `csv_path` — root of the clinical CSVs directory (default: `pcnsl-dataset_v1.0/csvs_for_amazon_anonymized`; pass `None` for imaging-only mode)
+  - `csv_path` — root of the clinical CSVs directory (default: `pcnsl-dataset_v1.0/clinical`; pass `None` for imaging-only mode)
 
 The public S3 bucket (`s3://ucsf-pcnsl`) uses no authentication (`UNSIGNED` config via botocore). The loader works against a local copy of the dataset, not directly against S3.
 
@@ -92,7 +92,7 @@ GE scanners report field strength in Gauss; values >100 are automatically conver
 - `modality`: `FLAIR` or `T1Post`
 - `stats_type`: `SummaryLesions`, `IndividualLesions`, or `radiomics`
 
-**Clinical CSV identity keys**: `patientdurablekey` is the patient-level identifier used across all clinical CSVs. BIDS subject IDs (e.g., `sub-0001`) correspond to `accessions` in some CSVs. One patient can have multiple accessions/sessions.
+**Clinical CSV identity keys**: every clinical CSV starts with `participant_id` (the BIDS subject ID, e.g. `sub-0001`, matching `pyalfe/<participant_id>/`). `patientdurablekey` is the same number zero-padded (`0001`). Each subject has a single session (`ses-0001`).
 
 ### Module-Level Convenience Functions
 
@@ -126,7 +126,7 @@ Defined at module top — used as `Literal` constraints throughout the API:
 - `fig1_data_overview` (.png/.eps/.pdf) — multi-panel: directory structure, medication timeline, mutation lollipop
 - `fig3_lesion_statistics` (.png/.eps) — lesion statistics across FLAIR/T1ce with bootstrapped CIs
 - `figS1_selection_flowchart` (.png/.eps/.pdf) — CONSORT-style patient inclusion/exclusion
-- `combined_lesion_data.csv` — aggregated lesion + radiomics data (150 subjects × 238 columns)
+- `combined_lesion_data.csv` — aggregated lesion + radiomics data (regenerate after the 2026-11-11 renumbering; previously 150 subjects × 238 columns)
 
 **`get-to-know-a-dataset-pcnsl.ipynb`** — interactive tutorial covering dataset structure, image loading, visualization, and DICOM header exploration.
 

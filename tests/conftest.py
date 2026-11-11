@@ -150,23 +150,22 @@ def tmp_csv_dir(tmp_path):
     csv_dir.mkdir()
 
     pd.DataFrame({
+        "participant_id": ["sub-0001", "sub-0002", "sub-0003"],
         "patientdurablekey": [1, 2, 3],
         "Sex": ["Female", "Male", "Female"],
-        "BirthDate": ["3/13/73", "5/23/62", "2/13/51"],
-        "Deathdate": [np.nan, "6/15/23", np.nan],
+        "BirthDate": ["1973-03-13", "1962-05-23", "1951-02-13"],
+        "Deathdate": [np.nan, "2023-06-15", np.nan],
         "FirstRace": ["White", "White", "Other"],
-        "Ethnicity": ["Not Hispanic or Latino", "Hispanic or Latino", "Not Hispanic or Latino"],
-        "PreferredLanguage": ["English", "English", "English"],
-        "SexualOrientation": ["Straight", "Straight", "Straight"],
         "SecondRace": [np.nan, np.nan, np.nan],
+        "Ethnicity": ["Not Hispanic or Latino", "Hispanic or Latino", "Not Hispanic or Latino"],
     }).to_csv(csv_dir / "demographics.csv", index=False)
 
     pd.DataFrame({
+        "participant_id": ["sub-0001", "sub-0002", "sub-0003"],
         "patientdurablekey": [1, 2, 3],
-        "accession": ["0001", "0002", "0003"],
-        "BiopsyDate": [np.nan, "1/7/21", "2/27/22"],
-        "DiagnosisDate": ["8/26/21", "1/9/21", "3/20/22"],
-        "ImageDate": ["7/21/21", "1/5/21", "5/12/21"],
+        "BiopsyDate": [np.nan, "2021-01-07", "2022-02-27"],
+        "DiagnosisDate": ["2021-08-26", "2021-01-09", "2022-03-20"],
+        "ImageDate": ["2021-07-21", "2021-01-05", "2021-05-12"],
         "BiopsyDateMinusImageDate": [np.nan, 2.0, 291.0],
         "DiagnosisDateMinusImageDate": [36, 4, 312],
     }).to_csv(csv_dir / "biopsy_and_diagnosis_dates.csv", index=False)

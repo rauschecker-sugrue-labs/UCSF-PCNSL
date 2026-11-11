@@ -18,7 +18,7 @@ import pandas as pd
 # Default paths (relative to this file's location)
 DEFAULT_DATASET_PATH = Path(__file__).resolve().parent / "pcnsl-dataset_v1.0"
 DEFAULT_PYALFE_PATH = DEFAULT_DATASET_PATH / "pyalfe"
-DEFAULT_CSV_PATH = DEFAULT_DATASET_PATH / "csvs_for_amazon_anonymized"
+DEFAULT_CSV_PATH = DEFAULT_DATASET_PATH / "clinical"
 
 # Type aliases
 StatisticsType = Literal["IndividualLesions", "SummaryLesions", "radiomics"]
@@ -173,7 +173,7 @@ class AWSDataLoader:
             masks/lesions_seg_comp/
             skullstripped/lesions_{FLAIR,T1Post}_space/
             statistics/lesions_{SummaryLesions,IndividualLesions,radiomics}/
-        csvs_for_amazon_anonymized/
+        clinical/
             demographics.csv, ucsf500_mutations.csv, ...
 
     Can operate in imaging-only mode (csv_path=None) or full mode with clinical data.
